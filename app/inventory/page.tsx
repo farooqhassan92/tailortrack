@@ -110,6 +110,17 @@ const movementOptions = [
   { label: "Adjust", value: "ADJUSTMENT" }
 ] as const;
 
+const statusMessages = {
+  "archived-code": "That internal code belongs to an archived item. Restore it before adding stock.",
+  created: "Inventory item added.",
+  "duplicate-code": "That internal code is already used. Leave the code empty or enter a unique code.",
+  "invalid-number": "Enter valid numbers for quantity, cost, and sale price.",
+  missing: "Item name is required.",
+  "movement-missing": "Select an item and enter a quantity before updating stock.",
+  restocked: "Existing inventory item restocked.",
+  "stock-updated": "Stock updated."
+} as const;
+
 type DecimalLike = {
   toNumber: () => number;
 };
@@ -137,13 +148,20 @@ function formatCurrency(value: DecimalLike | number | null | undefined) {
 export default async function Page({
   searchParams
 }: {
-  searchParams?: Promise<{ category?: string | string[]; q?: string | string[] }>;
+  searchParams?: Promise<{
+    category?: string | string[];
+    q?: string | string[];
+    status?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const selectedCategory = Array.isArray(params?.category)
     ? params?.category[0]
     : params?.category;
   const query = Array.isArray(params?.q) ? params?.q[0] : params?.q;
+  const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
+  const statusMessage =
+    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
   const normalizedQuery = query?.trim() ?? "";
   const categoryFilter = inventoryCategories.some((category) => category.value === selectedCategory)
     ? selectedCategory
@@ -294,6 +312,12 @@ export default async function Page({
             </div>
           </div>
         </section>
+
+        {statusMessage ? (
+          <div className="rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800">
+            {statusMessage}
+          </div>
+        ) : null}
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0">
@@ -561,7 +585,7 @@ export default async function Page({
                       Add stock item
                     </span>
                     <span className="block text-xs text-slate-500">
-                      Prices are saved per selling unit
+                      New item or restock by internal code
                     </span>
                   </span>
                 </span>
@@ -593,7 +617,7 @@ export default async function Page({
                   <input
                     className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-teal-400"
                     name="sku"
-                    placeholder="Code auto if empty"
+                    placeholder="Existing code to restock"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -612,8 +636,8 @@ export default async function Page({
                   />
                 </div>
                 <p className="-mt-1 text-xs leading-5 text-slate-500">
-                  Leave unit empty to use the category default: rolls use meter, boxes use box,
-                  readymade uses piece.
+                  If this code already exists, the quantity is added to that item instead of
+                  creating a duplicate.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <input

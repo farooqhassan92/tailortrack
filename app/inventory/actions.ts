@@ -47,8 +47,23 @@ const movementLabels = {
   ADJUSTMENT: "Adjustment"
 } as const;
 
-function inventoryCategoryPath(category: keyof typeof categoryDefaults): Route {
-  return `/inventory?category=${category}` as Route;
+function inventoryCategoryPath(
+  category: keyof typeof categoryDefaults,
+  status?: string
+): Route {
+  const params = new URLSearchParams({
+    category
+  });
+
+  if (status) {
+    params.set("status", status);
+  }
+
+  return `/inventory?${params.toString()}` as Route;
+}
+
+function inventoryStatusPath(status: string): Route {
+  return `/inventory?status=${status}` as Route;
 }
 
 function readString(formData: FormData, key: string) {
@@ -58,13 +73,22 @@ function readString(formData: FormData, key: string) {
 
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
-  return value ? new Prisma.Decimal(value) : new Prisma.Decimal(0);
+  return value ? new Prisma.Decimal(value.replace(/,/g, "")) : new Prisma.Decimal(0);
 }
 
 function makeInternalCode(type: keyof typeof productTypePrefixes) {
   const stamp = Date.now().toString(36).toUpperCase();
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `${productTypePrefixes[type]}-${stamp}-${suffix}`;
+}
+
+function isDuplicateSkuError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes("sku")
+  );
 }
 
 export async function createInventoryItem(formData: FormData) {
@@ -74,10 +98,9 @@ export async function createInventoryItem(formData: FormData) {
   const type = categoryConfig.type as keyof typeof productTypePrefixes;
   const name = readString(formData, "name");
   const providedSku = readString(formData, "sku");
-  const quantity = readDecimal(formData, "quantity");
 
   if (!name || !productTypePrefixes[type]) {
-    return;
+    redirect(inventoryCategoryPath(selectedCategory, "missing"));
   }
 
   const sku = providedSku || makeInternalCode(type);
@@ -85,50 +108,122 @@ export async function createInventoryItem(formData: FormData) {
   const color = readString(formData, "color") || null;
   const size = readString(formData, "size") || null;
   const fabricType = readString(formData, "fabricType") || null;
-  const costPrice = readDecimal(formData, "costPrice");
-  const sellingPrice = readDecimal(formData, "sellingPrice");
 
-  await prisma.$transaction(async (tx) => {
-    const product = await tx.product.create({
-      data: {
-        color,
-        category: selectedCategory,
-        costPrice,
-        fabricType,
-        name,
-        quantityOnHand: quantity,
-        sellingPrice,
-        size,
-        sku,
-        type,
-        unit
+  let quantity: Prisma.Decimal;
+  let costPrice: Prisma.Decimal;
+  let sellingPrice: Prisma.Decimal;
+
+  try {
+    quantity = readDecimal(formData, "quantity");
+    costPrice = readDecimal(formData, "costPrice");
+    sellingPrice = readDecimal(formData, "sellingPrice");
+  } catch {
+    redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
+  }
+
+  if (providedSku) {
+    const existingProduct = await prisma.product.findUnique({
+      where: {
+        sku: providedSku
       }
     });
 
-    if (!quantity.isZero()) {
-      await tx.inventoryMovement.create({
+    if (existingProduct) {
+      if (existingProduct.archivedAt) {
+        redirect(inventoryCategoryPath(selectedCategory, "archived-code"));
+      }
+
+      await prisma.$transaction([
+        prisma.product.update({
+          data: {
+            category: selectedCategory,
+            color: color ?? existingProduct.color,
+            costPrice: costPrice.gt(0) ? costPrice : existingProduct.costPrice,
+            fabricType: fabricType ?? existingProduct.fabricType,
+            name,
+            quantityOnHand: {
+              increment: quantity
+            },
+            sellingPrice: sellingPrice.gt(0) ? sellingPrice : existingProduct.sellingPrice,
+            size: size ?? existingProduct.size,
+            type,
+            unit
+          },
+          where: {
+            id: existingProduct.id
+          }
+        }),
+        prisma.inventoryMovement.create({
+          data: {
+            note: "Restocked from add stock item",
+            productId: existingProduct.id,
+            quantity,
+            type: "STOCK_IN"
+          }
+        })
+      ]);
+
+      revalidatePath("/inventory");
+      redirect(inventoryCategoryPath(selectedCategory, "restocked"));
+    }
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
         data: {
-          note: "Opening stock",
-          productId: product.id,
-          quantity,
-          type: "STOCK_IN"
+          color,
+          category: selectedCategory,
+          costPrice,
+          fabricType,
+          name,
+          quantityOnHand: quantity,
+          sellingPrice,
+          size,
+          sku,
+          type,
+          unit
         }
       });
+
+      if (!quantity.isZero()) {
+        await tx.inventoryMovement.create({
+          data: {
+            note: "Opening stock",
+            productId: product.id,
+            quantity,
+            type: "STOCK_IN"
+          }
+        });
+      }
+    });
+  } catch (error) {
+    if (isDuplicateSkuError(error)) {
+      redirect(inventoryCategoryPath(selectedCategory, "duplicate-code"));
     }
-  });
+
+    throw error;
+  }
 
   revalidatePath("/inventory");
-  redirect(inventoryCategoryPath(selectedCategory));
+  redirect(inventoryCategoryPath(selectedCategory, "created"));
 }
 
 export async function recordInventoryMovement(formData: FormData) {
   const productId = readString(formData, "productId");
   const type = readString(formData, "type") as keyof typeof movementLabels;
-  const quantity = readDecimal(formData, "quantity");
   const note = readString(formData, "note") || null;
 
+  let quantity: Prisma.Decimal;
+
+  try {
+    quantity = readDecimal(formData, "quantity");
+  } catch {
+    redirect(inventoryStatusPath("invalid-number"));
+  }
+
   if (!productId || !movementLabels[type] || quantity.lte(0)) {
-    return;
+    redirect(inventoryStatusPath("movement-missing"));
   }
 
   const quantityDelta =
@@ -156,6 +251,7 @@ export async function recordInventoryMovement(formData: FormData) {
   ]);
 
   revalidatePath("/inventory");
+  redirect(inventoryStatusPath("stock-updated"));
 }
 
 export async function updateInventoryItem(formData: FormData) {
