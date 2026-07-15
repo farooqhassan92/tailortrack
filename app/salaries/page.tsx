@@ -46,7 +46,7 @@ const statusMessages = {
     variant: "success"
   },
   empty: {
-    text: "No eligible delivered orders were found for that payment.",
+    text: "No eligible ready or delivered orders were found for that payment.",
     variant: "warning"
   },
   "invalid-number": {
@@ -54,7 +54,7 @@ const statusMessages = {
     variant: "warning"
   },
   missing: {
-    text: "Select at least one delivered stitching order before creating a payment.",
+    text: "Select at least one ready or delivered stitching order before creating a payment.",
     variant: "warning"
   },
   "missing-rate": {
@@ -155,7 +155,7 @@ export default async function SalariesPage({
       },
       orderBy: [
         {
-          deliveredAt: "desc"
+          completedAt: "desc"
         },
         {
           updatedAt: "desc"
@@ -169,7 +169,9 @@ export default async function SalariesPage({
             }
           }
         },
-        status: "DELIVERED",
+        status: {
+          in: ["READY", "DELIVERED"]
+        },
         tailorId: {
           not: null
         }
@@ -478,7 +480,7 @@ export default async function SalariesPage({
             <div className="border-b border-slate-100 px-5 py-4">
               <h2 className="text-lg font-semibold text-slate-950">Pending weekly payments</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Tailors with delivered work that has not been paid yet.
+                Tailors with ready or delivered work that has not been paid yet.
               </p>
             </div>
 
@@ -499,7 +501,7 @@ export default async function SalariesPage({
                               {group.tailor.name}
                             </h3>
                             <p className="mt-1 text-sm text-slate-500">
-                              {group.orders.length} unpaid delivered order
+                              {group.orders.length} unpaid completed order
                               {group.orders.length === 1 ? "" : "s"}
                             </p>
                           </div>
@@ -532,7 +534,7 @@ export default async function SalariesPage({
                                   <th className="px-4 py-3 font-semibold">Pay</th>
                                   <th className="px-4 py-3 font-semibold">Order</th>
                                   <th className="px-4 py-3 font-semibold">Customer</th>
-                                  <th className="px-4 py-3 font-semibold">Delivered</th>
+                                  <th className="px-4 py-3 font-semibold">Completed</th>
                                   <th className="px-4 py-3 text-right font-semibold">Rate</th>
                                 </tr>
                               </thead>
@@ -565,7 +567,7 @@ export default async function SalariesPage({
                                         {order.customer.name}
                                       </td>
                                       <td className="px-4 py-3 text-slate-600">
-                                        {formatDate(order.deliveredAt)}
+                                        {formatDate(order.completedAt ?? order.deliveredAt)}
                                       </td>
                                       <td className="px-4 py-3 text-right font-semibold text-slate-950">
                                         {hasRate ? (
@@ -629,7 +631,7 @@ export default async function SalariesPage({
                     No pending tailor payments
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Delivered unpaid work appears here after a tailor is assigned.
+                    Ready or delivered unpaid work appears here after a tailor is assigned.
                   </p>
                 </div>
               )}

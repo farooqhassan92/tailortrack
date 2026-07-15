@@ -147,7 +147,9 @@ export async function createSalaryBatch(formData: FormData) {
             }
           }
         },
-        status: "DELIVERED",
+        status: {
+          in: ["READY", "DELIVERED"]
+        },
         tailorId: {
           not: null
       }
