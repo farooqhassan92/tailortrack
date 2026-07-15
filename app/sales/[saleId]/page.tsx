@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   PackageCheck,
+  Plus,
   ReceiptText,
   Scissors,
   UserRound
@@ -15,6 +16,9 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { prisma } from "@/lib/prisma";
+
+import { addInvoicePayment } from "../actions";
+import { InvoicePrintButton } from "./invoice-print-button";
 
 export const dynamic = "force-dynamic";
 
@@ -72,11 +76,17 @@ function paymentTone(status: string) {
 }
 
 export default async function SaleDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ saleId: string }>;
+  searchParams?: Promise<{ payment?: string | string[]; print?: string | string[] }>;
 }) {
   const { saleId } = await params;
+  const query = await searchParams;
+  const printValue = Array.isArray(query?.print) ? query?.print[0] : query?.print;
+  const paymentValue = Array.isArray(query?.payment) ? query?.payment[0] : query?.payment;
+  const shouldAutoPrint = printValue === "1";
   const sale = await prisma.sale.findUnique({
     include: {
       customer: true,
@@ -111,41 +121,187 @@ export default async function SaleDetailPage({
   const balance = asNumber(sale.total) - asNumber(sale.paidAmount);
   const inventoryItems = sale.items.filter((item) => item.productId);
   const stitchingItems = sale.items.filter((item) => item.stitchingOrderId);
+  const paymentMessage =
+    paymentValue === "added"
+      ? "Payment recorded and invoice balance updated."
+      : paymentValue === "invalid"
+        ? "Enter a valid payment amount before saving."
+        : "";
 
   return (
     <AppShell>
-      <div className="space-y-5 sm:space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-slate-950 shadow-2xl shadow-slate-950/10">
+      <section className="print-receipt hidden">
+        <div className="receipt-header">
+          <div>
+            <p className="receipt-label">Invoice</p>
+            <h1>{sale.invoiceNumber}</h1>
+          </div>
+          <div className="receipt-meta">
+            <p>{formatDateTime(sale.createdAt)}</p>
+            <p>Status: {sale.paymentStatus}</p>
+          </div>
+        </div>
+
+        <div className="receipt-grid">
+          <section>
+            <h2>Customer Info</h2>
+            <p className="receipt-strong">{sale.customer?.name ?? "Walk-in customer"}</p>
+            {sale.customer ? (
+              <>
+                <p>{sale.customer.phone}</p>
+                {sale.customer.address ? <p>{sale.customer.address}</p> : null}
+              </>
+            ) : (
+              <p>No customer record attached.</p>
+            )}
+          </section>
+
+          <section>
+            <h2>Order Info</h2>
+            <p>Items: {sale.items.length}</p>
+            <p>Inventory: {inventoryItems.length}</p>
+            <p>Stitching: {stitchingItems.length}</p>
+          </section>
+        </div>
+
+        <section>
+          <h2>Order Items</h2>
+          <table className="receipt-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Type</th>
+                <th>Qty</th>
+                <th>Rate</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sale.items.map((item) => {
+                const unit = item.product?.unit ?? "service";
+
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <p className="receipt-strong">{item.description}</p>
+                      {item.product?.sku ? <p>SKU {item.product.sku}</p> : null}
+                      {item.stitchingOrder ? (
+                        <p>Order {item.stitchingOrder.orderNumber}</p>
+                      ) : null}
+                    </td>
+                    <td>{item.stitchingOrderId ? "Stitching" : "Inventory"}</td>
+                    <td>{formatQuantity(item.quantity, item.productId ? unit : null)}</td>
+                    <td>{formatCurrency(item.unitPrice)}</td>
+                    <td>{formatCurrency(item.total)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+
+        {stitchingItems.length ? (
+          <section>
+            <h2>Stitching Details</h2>
+            <div className="receipt-list">
+              {stitchingItems.map((item) => {
+                const order = item.stitchingOrder;
+
+                if (!order) {
+                  return null;
+                }
+
+                return (
+                  <div className="receipt-list-row" key={item.id}>
+                    <p className="receipt-strong">{order.orderNumber}</p>
+                    <p>{order.garmentType}</p>
+                    <p>Due: {formatDate(order.dueDate)}</p>
+                    <p>Charge: {formatCurrency(order.stitchingCharge)}</p>
+                    {order.styleNotes ? <p>Notes: {order.styleNotes}</p> : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="receipt-summary">
+          <div>
+            <span>Subtotal</span>
+            <strong>{formatCurrency(sale.subtotal)}</strong>
+          </div>
+          <div>
+            <span>Discount</span>
+            <strong>- {formatCurrency(sale.discount)}</strong>
+          </div>
+          <div>
+            <span>Total</span>
+            <strong>{formatCurrency(sale.total)}</strong>
+          </div>
+          <div>
+            <span>Paid</span>
+            <strong>{formatCurrency(sale.paidAmount)}</strong>
+          </div>
+          <div className="receipt-balance">
+            <span>Balance</span>
+            <strong>{formatCurrency(balance)}</strong>
+          </div>
+        </section>
+
+        {sale.payments.length ? (
+          <section>
+            <h2>Payments</h2>
+            <div className="receipt-list">
+              {sale.payments.map((payment) => (
+                <div className="receipt-list-row" key={payment.id}>
+                  <p>
+                    <span className="receipt-strong">{payment.method.replace("_", " ")}</span>{" "}
+                    - {formatCurrency(payment.amount)}
+                  </p>
+                  <p>{formatDateTime(payment.createdAt)}</p>
+                  {payment.note ? <p>{payment.note}</p> : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </section>
+
+      <div className="no-print space-y-5 sm:space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-slate-950 shadow-2xl shadow-slate-950/10 print:rounded-none print:border-0 print:bg-white print:shadow-none">
           <div className="relative p-5 sm:p-7 lg:p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.38),transparent_22rem),radial-gradient(circle_at_86%_12%,rgba(14,165,233,0.25),transparent_20rem),radial-gradient(circle_at_60%_96%,rgba(168,85,247,0.16),transparent_18rem)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.38),transparent_22rem),radial-gradient(circle_at_86%_12%,rgba(14,165,233,0.25),transparent_20rem),radial-gradient(circle_at_60%_96%,rgba(168,85,247,0.16),transparent_18rem)] print:hidden" />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <Link
-                  className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/15"
+                  className="no-print mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/15"
                   href="/sales"
                 >
                   <ArrowLeft aria-hidden="true" className="size-4" />
                   Back to sales
                 </Link>
                 <div className="flex items-center gap-3">
-                  <span className="flex size-12 items-center justify-center rounded-2xl bg-white text-slate-950 shadow-xl shadow-black/20">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-white text-slate-950 shadow-xl shadow-black/20 print:border print:border-slate-200 print:shadow-none">
                     <ReceiptText aria-hidden="true" className="size-6" />
                   </span>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200 print:text-slate-500">
                       Invoice detail
                     </p>
-                    <h1 className="mt-1 text-3xl font-semibold text-white sm:text-4xl">
+                    <h1 className="mt-1 text-3xl font-semibold text-white print:text-slate-950 sm:text-4xl">
                       {sale.invoiceNumber}
                     </h1>
                   </div>
                 </div>
-                <p className="mt-4 text-sm leading-6 text-slate-300 sm:text-base">
+                <p className="mt-4 text-sm leading-6 text-slate-300 print:text-slate-600 sm:text-base">
                   Created {formatDateTime(sale.createdAt)}
                 </p>
+                <div className="no-print mt-5">
+                  <InvoicePrintButton autoPrint={shouldAutoPrint} />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem]">
+              <div className="no-print grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[34rem]">
                 {[
                   {
                     icon: Banknote,
@@ -379,6 +535,74 @@ export default async function SaleDetailPage({
                 {sale.paymentStatus}
               </div>
             </section>
+
+            {paymentMessage ? (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                  paymentValue === "added"
+                    ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+                    : "border-amber-100 bg-amber-50 text-amber-800"
+                }`}
+              >
+                {paymentMessage}
+              </div>
+            ) : null}
+
+            {balance > 0 ? (
+              <section className="rounded-3xl border border-white/80 bg-white/85 p-5 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                    <Plus aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-950">Add payment</h2>
+                    <p className="text-xs text-slate-500">
+                      Remaining balance {formatCurrency(balance)}
+                    </p>
+                  </div>
+                </div>
+
+                <form action={addInvoicePayment} className="mt-4 grid gap-3">
+                  <input name="saleId" type="hidden" value={sale.id} />
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Amount received
+                    <input
+                      className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                      max={balance}
+                      min="0.01"
+                      name="amount"
+                      placeholder={formatCurrency(balance)}
+                      required
+                      step="0.01"
+                      type="number"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Payment method
+                    <select
+                      className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                      name="paymentMethod"
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="CARD">Card</option>
+                      <option value="BANK_TRANSFER">Bank transfer</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Note
+                    <input
+                      className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                      name="note"
+                      placeholder="Optional payment note"
+                    />
+                  </label>
+                  <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                    Save payment
+                  </button>
+                </form>
+              </section>
+            ) : null}
 
             <section className="rounded-3xl border border-white/80 bg-white/85 p-5 shadow-sm backdrop-blur">
               <div className="flex items-center gap-3">

@@ -7,6 +7,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Menu,
+  ReceiptText,
   Ruler,
   Scissors,
   Shirt,
@@ -33,6 +34,12 @@ const navigation = [
     icon: CreditCard,
     label: "Sales",
     iconTone: "bg-sky-50 text-sky-700 group-hover:bg-sky-100 group-hover:text-sky-800"
+  },
+  {
+    href: "/invoices",
+    icon: ReceiptText,
+    label: "Invoices",
+    iconTone: "bg-cyan-50 text-cyan-700 group-hover:bg-cyan-100 group-hover:text-cyan-800"
   },
   {
     href: "/customers",
@@ -70,8 +77,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)]">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 overflow-hidden border-r border-white/80 bg-slate-50/90 text-slate-800 shadow-[18px_0_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl lg:block">
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)] print:bg-white">
+      <aside className="no-print fixed inset-y-0 left-0 hidden w-72 overflow-hidden border-r border-white/80 bg-slate-50/90 text-slate-800 shadow-[18px_0_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl lg:block">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(14,165,233,0.18),transparent_15rem),radial-gradient(circle_at_92%_24%,rgba(20,184,166,0.16),transparent_14rem),radial-gradient(circle_at_35%_78%,rgba(139,92,246,0.12),transparent_16rem),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.76)_48%,rgba(240,249,255,0.68))]" />
         <div className="relative flex h-full flex-col">
           <div className="border-b border-white/80 p-5">
@@ -91,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="grid gap-1.5 p-4 text-sm font-medium text-slate-600">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
                 <Link
@@ -132,8 +139,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <section className="lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 px-4 py-3 shadow-sm shadow-slate-950/5 backdrop-blur-2xl sm:px-5 lg:hidden">
+      <section className="lg:pl-72 print:pl-0">
+        <header className="no-print sticky top-0 z-20 border-b border-white/70 bg-white/80 px-4 py-3 shadow-sm shadow-slate-950/5 backdrop-blur-2xl sm:px-5 lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link className="flex min-w-0 items-center gap-3" href="/dashboard">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/20">
@@ -155,11 +162,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 text-sm font-semibold text-slate-600">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
                 <Link
                   className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 transition ${
-                    pathname === item.href
+                    isActive
                       ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/15"
                       : "border-white bg-white/80 hover:border-teal-100 hover:bg-teal-50 hover:text-teal-800"
                   }`}
@@ -173,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </header>
-        <div className="mx-auto max-w-7xl p-4 sm:p-6 xl:p-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 sm:p-6 xl:p-8 print:max-w-none print:p-0">{children}</div>
       </section>
     </main>
   );

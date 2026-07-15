@@ -43,6 +43,18 @@ const statusMessages = {
   missing: "Customer name and phone are required."
 } as const;
 
+const measurementFields = [
+  { label: "Shirt length", name: "shirtLength" },
+  { label: "Shoulder", name: "shoulder" },
+  { label: "Chest", name: "chest" },
+  { label: "Waist", name: "waist" },
+  { label: "Sleeve", name: "sleeve" },
+  { label: "Collar", name: "collar" },
+  { label: "Trouser length", name: "trouserLength" },
+  { label: "Trouser waist", name: "trouserWaist" },
+  { label: "Inseam", name: "inseam" }
+] as const;
+
 export default async function CustomersPage({
   searchParams
 }: {
@@ -386,6 +398,36 @@ export default async function CustomersPage({
                   name="notes"
                   placeholder="Notes"
                 />
+                <details className="group rounded-2xl border border-violet-100 bg-white/80 p-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-violet-700">
+                    Initial measurements
+                    <span className="text-xs text-violet-500 group-open:hidden">Open</span>
+                    <span className="hidden text-xs text-slate-500 group-open:inline">Close</span>
+                  </summary>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-400 sm:col-span-2"
+                      name="measurementLabel"
+                      placeholder="Profile label, e.g. Default"
+                    />
+                    {measurementFields.map((field) => (
+                      <input
+                        className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-400"
+                        key={field.name}
+                        min="0"
+                        name={field.name}
+                        placeholder={field.label}
+                        step="0.01"
+                        type="number"
+                      />
+                    ))}
+                    <textarea
+                      className="min-h-20 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-violet-400 sm:col-span-2"
+                      name="measurementStyleNotes"
+                      placeholder="Fit preference, collar, cuff, trouser style"
+                    />
+                  </div>
+                </details>
                 <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
                   Add customer
                 </button>

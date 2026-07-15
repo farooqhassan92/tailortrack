@@ -40,6 +40,14 @@ function makeStitchingOrderNumber() {
   return `ST-${stamp}-${suffix}`;
 }
 
+function getPaymentStatus(paidAmount: Prisma.Decimal, total: Prisma.Decimal) {
+  if (paidAmount.isZero()) {
+    return "UNPAID";
+  }
+
+  return paidAmount.lt(total) ? "PARTIAL" : "PAID";
+}
+
 export async function createInventorySale(formData: FormData) {
   const productId = readString(formData, "productId");
   const customerId = readString(formData, "customerId") || null;
@@ -86,13 +94,9 @@ export async function createInventorySale(formData: FormData) {
   const safeDiscount = Prisma.Decimal.min(discount, subtotal);
   const total = subtotal.sub(safeDiscount);
   const safePaidAmount = Prisma.Decimal.min(paidAmount, total);
-  const paymentStatus = safePaidAmount.isZero()
-    ? "UNPAID"
-    : safePaidAmount.lt(total)
-      ? "PARTIAL"
-      : "PAID";
+  const paymentStatus = getPaymentStatus(safePaidAmount, total);
 
-  await prisma.$transaction(async (tx) => {
+  const saleId = await prisma.$transaction(async (tx) => {
     const sale = await tx.sale.create({
       data: {
         customerId,
@@ -172,11 +176,75 @@ export async function createInventorySale(formData: FormData) {
         }
       });
     }
+
+    return sale.id;
   });
 
   revalidatePath("/sales");
+  revalidatePath(`/sales/${saleId}`);
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
   revalidatePath("/stitching-orders");
-  redirect(salesPath("created"));
+  redirect(`/sales/${saleId}?print=1` as Route);
+}
+
+export async function addInvoicePayment(formData: FormData) {
+  const saleId = readString(formData, "saleId");
+  const amount = readDecimal(formData, "amount");
+  const paymentMethod = readString(formData, "paymentMethod") || "CASH";
+  const note = readString(formData, "note");
+
+  if (!saleId || amount.lte(0)) {
+    redirect(`/sales/${saleId}?payment=invalid` as Route);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({
+      select: {
+        invoiceNumber: true,
+        paidAmount: true,
+        total: true
+      },
+      where: {
+        id: saleId
+      }
+    });
+
+    if (!sale) {
+      return;
+    }
+
+    const remainingBalance = sale.total.sub(sale.paidAmount);
+    const safeAmount = Prisma.Decimal.min(amount, remainingBalance);
+
+    if (safeAmount.lte(0)) {
+      return;
+    }
+
+    const nextPaidAmount = sale.paidAmount.add(safeAmount);
+
+    await tx.payment.create({
+      data: {
+        amount: safeAmount,
+        method: paymentMethod as "CASH" | "CARD" | "BANK_TRANSFER" | "OTHER",
+        note: note || `Payment for ${sale.invoiceNumber}`,
+        saleId
+      }
+    });
+
+    await tx.sale.update({
+      data: {
+        paidAmount: nextPaidAmount,
+        paymentStatus: getPaymentStatus(nextPaidAmount, sale.total)
+      },
+      where: {
+        id: saleId
+      }
+    });
+  });
+
+  revalidatePath("/sales");
+  revalidatePath(`/sales/${saleId}`);
+  revalidatePath("/dashboard");
+  redirect(`/sales/${saleId}?payment=added` as Route);
 }
