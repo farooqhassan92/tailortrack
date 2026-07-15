@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 import {
   AlertTriangle,
@@ -111,14 +112,58 @@ const movementOptions = [
 ] as const;
 
 const statusMessages = {
-  "archived-code": "That internal code belongs to an archived item. Restore it before adding stock.",
-  created: "Inventory item added.",
-  "duplicate-code": "That internal code is already used. Leave the code empty or enter a unique code.",
-  "invalid-number": "Enter valid numbers for quantity, cost, and sale price.",
-  missing: "Item name is required.",
-  "movement-missing": "Select an item and enter a quantity before updating stock.",
-  restocked: "Existing inventory item restocked.",
-  "stock-updated": "Stock updated."
+  "archived-code": {
+    text: "That internal code belongs to an archived item. Restore it before adding stock.",
+    variant: "warning"
+  },
+  archived: {
+    text: "Inventory item removed from active stock.",
+    variant: "success"
+  },
+  created: {
+    text: "Inventory item added.",
+    variant: "success"
+  },
+  "delete-missing": {
+    text: "Select an inventory item before removing it.",
+    variant: "warning"
+  },
+  "duplicate-code": {
+    text: "That internal code is already used. Leave the code empty or enter a unique code.",
+    variant: "warning"
+  },
+  "invalid-number": {
+    text: "Enter valid numbers for quantity, cost, and sale price.",
+    variant: "warning"
+  },
+  missing: {
+    text: "Item name is required.",
+    variant: "warning"
+  },
+  "movement-missing": {
+    text: "Select an item and enter a quantity before updating stock.",
+    variant: "warning"
+  },
+  restored: {
+    text: "Inventory item restored.",
+    variant: "success"
+  },
+  restocked: {
+    text: "Existing inventory item restocked.",
+    variant: "success"
+  },
+  "restore-missing": {
+    text: "Select an inventory item before restoring it.",
+    variant: "warning"
+  },
+  "stock-updated": {
+    text: "Stock updated.",
+    variant: "success"
+  },
+  updated: {
+    text: "Inventory item details updated.",
+    variant: "success"
+  }
 } as const;
 
 type DecimalLike = {
@@ -160,8 +205,7 @@ export default async function Page({
     : params?.category;
   const query = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
-  const statusMessage =
-    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
+  const statusMessage = getStatusMessage(statusMessages, status);
   const normalizedQuery = query?.trim() ?? "";
   const categoryFilter = inventoryCategories.some((category) => category.value === selectedCategory)
     ? selectedCategory
@@ -313,11 +357,7 @@ export default async function Page({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className="rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800">
-            {statusMessage}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 import {
   Banknote,
@@ -46,24 +47,28 @@ function formatCurrency(value: DecimalLike | number | null | undefined) {
 
 const statusMessages = {
   created: {
-    tone: "border-emerald-100 bg-emerald-50 text-emerald-800",
-    text: "Sale created and inventory stock was reduced automatically."
+    text: "Sale created and inventory stock was reduced automatically.",
+    variant: "success"
   },
   missing: {
-    tone: "border-amber-100 bg-amber-50 text-amber-800",
-    text: "Select an item and enter a quantity before creating a sale."
+    text: "Select an item and enter a quantity before creating a sale.",
+    variant: "warning"
   },
   "invalid-product": {
-    tone: "border-rose-100 bg-rose-50 text-rose-800",
-    text: "That inventory item is not available for sale."
+    text: "That inventory item is not available for sale.",
+    variant: "error"
   },
   "insufficient-stock": {
-    tone: "border-rose-100 bg-rose-50 text-rose-800",
-    text: "Not enough stock is available for that sale quantity."
+    text: "Not enough stock is available for that sale quantity.",
+    variant: "error"
   },
   "customer-required": {
-    tone: "border-amber-100 bg-amber-50 text-amber-800",
-    text: "Select a customer before creating a stitching order."
+    text: "Select a customer before creating a stitching order.",
+    variant: "warning"
+  },
+  "invalid-number": {
+    text: "Enter valid numbers before creating a sale.",
+    variant: "warning"
   }
 } as const;
 
@@ -85,9 +90,7 @@ export default async function SalesPage({
     ? params?.customerId[0]
     : params?.customerId;
   const customerQuery = customerQueryValue?.trim() ?? "";
-  const statusMessage = status && status in statusMessages
-    ? statusMessages[status as keyof typeof statusMessages]
-    : null;
+  const statusMessage = getStatusMessage(statusMessages, status);
 
   const [products, selectedCustomer, customerMatches, recentSales, totals] = await Promise.all([
     prisma.product.findMany({
@@ -222,11 +225,7 @@ export default async function SalesPage({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${statusMessage.tone}`}>
-            {statusMessage.text}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/80 shadow-sm backdrop-blur">

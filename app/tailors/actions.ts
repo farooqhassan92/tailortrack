@@ -64,7 +64,7 @@ export async function toggleTailorActive(formData: FormData) {
   const active = readString(formData, "active") === "true";
 
   if (!tailorId) {
-    return;
+    redirect(tailorsPath("missing"));
   }
 
   await prisma.tailor.update({

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 
 import { createMeasurement, updateMeasurement } from "./actions";
@@ -43,9 +44,22 @@ const measurementFields: Array<{ key: MeasurementValueKey; label: string; placeh
 ];
 
 const statusMessages = {
-  created: "Measurement profile created.",
-  missing: "Select a customer before saving measurements.",
-  updated: "Measurement profile updated."
+  created: {
+    text: "Measurement profile created.",
+    variant: "success"
+  },
+  "invalid-number": {
+    text: "Enter valid measurement numbers before saving.",
+    variant: "warning"
+  },
+  missing: {
+    text: "Select a customer before saving measurements.",
+    variant: "warning"
+  },
+  updated: {
+    text: "Measurement profile updated.",
+    variant: "success"
+  }
 } as const;
 
 function asNumber(value: DecimalLike | number | null | undefined) {
@@ -76,8 +90,7 @@ export default async function MeasurementsPage({
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
   const query = queryValue?.trim() ?? "";
   const returnTo = `/measurements?${new URLSearchParams(query ? { q: query } : {}).toString()}`;
-  const statusMessage =
-    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
+  const statusMessage = getStatusMessage(statusMessages, status);
 
   const [customers, profileCount, customerCount] = await Promise.all([
     prisma.customer.findMany({
@@ -175,11 +188,7 @@ export default async function MeasurementsPage({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            {statusMessage}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="rounded-3xl border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
           <form action="/measurements" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">

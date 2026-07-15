@@ -14,7 +14,7 @@ function readString(formData: FormData, key: string) {
 
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
-  return value ? new Prisma.Decimal(value) : null;
+  return value ? new Prisma.Decimal(value.replace(/,/g, "")) : null;
 }
 
 function safeReturnTo(value: string) {
@@ -45,9 +45,17 @@ export async function createMeasurement(formData: FormData) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=missing` as Route);
   }
 
+  let data: ReturnType<typeof measurementData>;
+
+  try {
+    data = measurementData(formData);
+  } catch {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=invalid-number` as Route);
+  }
+
   await prisma.customerMeasurement.create({
     data: {
-      ...measurementData(formData),
+      ...data,
       customerId
     }
   });
@@ -66,8 +74,16 @@ export async function updateMeasurement(formData: FormData) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=missing` as Route);
   }
 
+  let data: ReturnType<typeof measurementData>;
+
+  try {
+    data = measurementData(formData);
+  } catch {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=invalid-number` as Route);
+  }
+
   await prisma.customerMeasurement.update({
-    data: measurementData(formData),
+    data,
     where: {
       id: measurementId
     }

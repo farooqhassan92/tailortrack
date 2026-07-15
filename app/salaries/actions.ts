@@ -35,7 +35,7 @@ function paidSalariesPath(status: string, batchId?: string, tailorId?: string): 
 
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
-  return value ? new Prisma.Decimal(value) : new Prisma.Decimal(0);
+  return value ? new Prisma.Decimal(value.replace(/,/g, "")) : new Prisma.Decimal(0);
 }
 
 function parseDate(value: string, fallback: Date) {
@@ -49,8 +49,15 @@ function normalizeRateKey(value: string) {
 export async function saveStitchingRate(formData: FormData) {
   const productId = readString(formData, "productId");
   const garmentType = readString(formData, "garmentType");
-  const tailorRate = readDecimal(formData, "tailorRate");
-  const customerCharge = readDecimal(formData, "customerCharge");
+  let tailorRate: Prisma.Decimal;
+  let customerCharge: Prisma.Decimal;
+
+  try {
+    tailorRate = readDecimal(formData, "tailorRate");
+    customerCharge = readDecimal(formData, "customerCharge");
+  } catch {
+    redirect(salariesPath("invalid-number"));
+  }
 
   if (!garmentType || tailorRate.lte(0)) {
     redirect(salariesPath("rate-missing"));

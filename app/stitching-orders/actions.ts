@@ -38,7 +38,7 @@ export async function updateStitchingOrder(formData: FormData) {
   const returnTo = safeReturnTo(readString(formData, "returnTo"));
 
   if (!orderId) {
-    redirect(returnTo);
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=missing` as Route);
   }
 
   const now = new Date();
@@ -59,5 +59,5 @@ export async function updateStitchingOrder(formData: FormData) {
 
   revalidatePath("/stitching-orders");
   revalidatePath("/dashboard");
-  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}updated=1` as Route);
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=updated` as Route);
 }

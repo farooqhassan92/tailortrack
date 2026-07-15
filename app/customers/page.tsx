@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 import {
   Archive,
@@ -37,10 +38,26 @@ function formatCurrency(value: DecimalLike | number | null | undefined) {
 }
 
 const statusMessages = {
-  created: "Customer profile created.",
-  updated: "Customer profile updated.",
-  archived: "Customer removed from active records.",
-  missing: "Customer name and phone are required."
+  archived: {
+    text: "Customer removed from active records.",
+    variant: "success"
+  },
+  created: {
+    text: "Customer profile created.",
+    variant: "success"
+  },
+  "invalid-number": {
+    text: "Enter valid measurement numbers before saving the customer.",
+    variant: "warning"
+  },
+  missing: {
+    text: "Customer name and phone are required.",
+    variant: "warning"
+  },
+  updated: {
+    text: "Customer profile updated.",
+    variant: "success"
+  }
 } as const;
 
 const measurementFields = [
@@ -64,8 +81,7 @@ export default async function CustomersPage({
   const query = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
   const normalizedQuery = query?.trim() ?? "";
-  const statusMessage =
-    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
+  const statusMessage = getStatusMessage(statusMessages, status);
 
   const [customers, customerCount, totals] = await Promise.all([
     prisma.customer.findMany({
@@ -184,11 +200,7 @@ export default async function CustomersPage({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className="rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-800">
-            {statusMessage}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/80 shadow-sm backdrop-blur">

@@ -263,7 +263,7 @@ export async function updateInventoryItem(formData: FormData) {
   const name = readString(formData, "name");
 
   if (!productId || !name || !productTypePrefixes[type]) {
-    return;
+    redirect(inventoryCategoryPath(selectedCategory, "missing"));
   }
 
   const sku = readString(formData, "sku") || null;
@@ -271,36 +271,51 @@ export async function updateInventoryItem(formData: FormData) {
   const color = readString(formData, "color") || null;
   const size = readString(formData, "size") || null;
   const fabricType = readString(formData, "fabricType") || null;
-  const costPrice = readDecimal(formData, "costPrice");
-  const sellingPrice = readDecimal(formData, "sellingPrice");
+  let costPrice: Prisma.Decimal;
+  let sellingPrice: Prisma.Decimal;
 
-  await prisma.product.update({
-    data: {
-      category: selectedCategory,
-      color,
-      costPrice,
-      fabricType,
-      name,
-      sellingPrice,
-      size,
-      sku,
-      type,
-      unit
-    },
-    where: {
-      id: productId
+  try {
+    costPrice = readDecimal(formData, "costPrice");
+    sellingPrice = readDecimal(formData, "sellingPrice");
+  } catch {
+    redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
+  }
+
+  try {
+    await prisma.product.update({
+      data: {
+        category: selectedCategory,
+        color,
+        costPrice,
+        fabricType,
+        name,
+        sellingPrice,
+        size,
+        sku,
+        type,
+        unit
+      },
+      where: {
+        id: productId
+      }
+    });
+  } catch (error) {
+    if (isDuplicateSkuError(error)) {
+      redirect(inventoryCategoryPath(selectedCategory, "duplicate-code"));
     }
-  });
+
+    throw error;
+  }
 
   revalidatePath("/inventory");
-  redirect(inventoryCategoryPath(selectedCategory));
+  redirect(inventoryCategoryPath(selectedCategory, "updated"));
 }
 
 export async function deleteInventoryItem(formData: FormData) {
   const productId = readString(formData, "productId");
 
   if (!productId) {
-    return;
+    redirect(inventoryStatusPath("delete-missing"));
   }
 
   const [movementCount, saleItemCount, tailorRateCount] = await Promise.all([
@@ -339,13 +354,14 @@ export async function deleteInventoryItem(formData: FormData) {
   }
 
   revalidatePath("/inventory");
+  redirect(inventoryStatusPath("archived"));
 }
 
 export async function restoreInventoryItem(formData: FormData) {
   const productId = readString(formData, "productId");
 
   if (!productId) {
-    return;
+    redirect(inventoryStatusPath("restore-missing"));
   }
 
   await prisma.product.update({
@@ -358,4 +374,5 @@ export async function restoreInventoryItem(formData: FormData) {
   });
 
   revalidatePath("/inventory");
+  redirect(inventoryStatusPath("restored"));
 }

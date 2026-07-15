@@ -14,7 +14,7 @@ function readString(formData: FormData, key: string) {
 
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
-  return value ? new Prisma.Decimal(value) : null;
+  return value ? new Prisma.Decimal(value.replace(/,/g, "")) : null;
 }
 
 function customersPath(status: string): Route {
@@ -57,10 +57,17 @@ export async function createCustomer(formData: FormData) {
   const phone = readString(formData, "phone");
   const address = readString(formData, "address") || null;
   const notes = readString(formData, "notes") || null;
-  const measurement = readInitialMeasurement(formData);
 
   if (!name || !phone) {
     redirect(customersPath("missing"));
+  }
+
+  let measurement: ReturnType<typeof readInitialMeasurement>;
+
+  try {
+    measurement = readInitialMeasurement(formData);
+  } catch {
+    redirect(customersPath("invalid-number"));
   }
 
   await prisma.customer.create({
@@ -117,7 +124,7 @@ export async function archiveOrDeleteCustomer(formData: FormData) {
   const customerId = readString(formData, "customerId");
 
   if (!customerId) {
-    return;
+    redirect(customersPath("missing"));
   }
 
   const [saleCount, stitchingOrderCount, measurementCount] = await Promise.all([

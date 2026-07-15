@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 
 import { addInvoicePayment } from "../actions";
@@ -75,6 +76,25 @@ function paymentTone(status: string) {
   return "border-rose-100 bg-rose-50 text-rose-700";
 }
 
+const paymentMessages = {
+  added: {
+    text: "Payment recorded and invoice balance updated.",
+    variant: "success"
+  },
+  invalid: {
+    text: "Enter a valid payment amount before saving.",
+    variant: "warning"
+  },
+  "not-found": {
+    text: "Invoice was not found.",
+    variant: "error"
+  },
+  "no-balance": {
+    text: "This invoice has no remaining balance to settle.",
+    variant: "info"
+  }
+} as const;
+
 export default async function SaleDetailPage({
   params,
   searchParams
@@ -121,12 +141,7 @@ export default async function SaleDetailPage({
   const balance = asNumber(sale.total) - asNumber(sale.paidAmount);
   const inventoryItems = sale.items.filter((item) => item.productId);
   const stitchingItems = sale.items.filter((item) => item.stitchingOrderId);
-  const paymentMessage =
-    paymentValue === "added"
-      ? "Payment recorded and invoice balance updated."
-      : paymentValue === "invalid"
-        ? "Enter a valid payment amount before saving."
-        : "";
+  const paymentMessage = getStatusMessage(paymentMessages, paymentValue);
 
   return (
     <AppShell>
@@ -536,17 +551,7 @@ export default async function SaleDetailPage({
               </div>
             </section>
 
-            {paymentMessage ? (
-              <div
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
-                  paymentValue === "added"
-                    ? "border-emerald-100 bg-emerald-50 text-emerald-800"
-                    : "border-amber-100 bg-amber-50 text-amber-800"
-                }`}
-              >
-                {paymentMessage}
-              </div>
-            ) : null}
+            <StatusAlert message={paymentMessage} />
 
             {balance > 0 ? (
               <section className="rounded-3xl border border-white/80 bg-white/85 p-5 shadow-sm backdrop-blur">

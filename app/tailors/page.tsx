@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 
 import { createTailor, toggleTailorActive, updateTailor } from "./actions";
@@ -25,11 +26,26 @@ type DecimalLike = {
 };
 
 const statusMessages = {
-  activated: "Tailor activated.",
-  created: "Tailor profile created.",
-  deactivated: "Tailor deactivated.",
-  missing: "Tailor name is required.",
-  updated: "Tailor profile updated."
+  activated: {
+    text: "Tailor activated.",
+    variant: "success"
+  },
+  created: {
+    text: "Tailor profile created.",
+    variant: "success"
+  },
+  deactivated: {
+    text: "Tailor deactivated.",
+    variant: "info"
+  },
+  missing: {
+    text: "Tailor name is required.",
+    variant: "warning"
+  },
+  updated: {
+    text: "Tailor profile updated.",
+    variant: "success"
+  }
 } as const;
 
 function asNumber(value: DecimalLike | number | null | undefined) {
@@ -81,8 +97,7 @@ export default async function TailorsPage({
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
   const query = queryValue?.trim() ?? "";
-  const statusMessage =
-    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
+  const statusMessage = getStatusMessage(statusMessages, status);
 
   const [tailors, activeCount, inactiveCount, openOrderCount, deliveredCount] = await Promise.all([
     prisma.tailor.findMany({
@@ -203,11 +218,7 @@ export default async function TailorsPage({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800">
-            {statusMessage}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/90 shadow-sm backdrop-blur">

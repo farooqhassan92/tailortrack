@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 
 import { updateStitchingOrder } from "./actions";
@@ -33,6 +34,17 @@ const statusOptions = [
   { label: "Delivered", value: "DELIVERED" },
   { label: "Cancelled", value: "CANCELLED" }
 ] as const;
+
+const statusMessages = {
+  missing: {
+    text: "Select a stitching order before updating it.",
+    variant: "warning"
+  },
+  updated: {
+    text: "Stitching order updated.",
+    variant: "success"
+  }
+} as const;
 
 type StatusFilter = "all" | StitchingStatus;
 
@@ -108,13 +120,23 @@ function dateInputValue(value: Date | null) {
 export default async function StitchingOrdersPage({
   searchParams
 }: {
-  searchParams?: Promise<{ q?: string | string[]; status?: string | string[]; updated?: string | string[] }>;
+  searchParams?: Promise<{
+    q?: string | string[];
+    status?: string | string[];
+    statusMessage?: string | string[];
+    updated?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const selectedStatus = getStatus(params?.status);
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const updatedValue = Array.isArray(params?.updated) ? params?.updated[0] : params?.updated;
+  const statusValue = Array.isArray(params?.statusMessage) ? params?.statusMessage[0] : params?.statusMessage;
   const query = queryValue?.trim() ?? "";
+  const statusMessage = getStatusMessage(
+    statusMessages,
+    statusValue ?? (updatedValue === "1" ? "updated" : undefined)
+  );
   const returnTo = `/stitching-orders?${new URLSearchParams({
     ...(query ? { q: query } : {}),
     status: selectedStatus
@@ -256,11 +278,7 @@ export default async function StitchingOrdersPage({
           </div>
         </section>
 
-        {updatedValue === "1" ? (
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            Stitching order updated.
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="rounded-3xl border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">

@@ -14,7 +14,7 @@ function readString(formData: FormData, key: string) {
 
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
-  return value ? new Prisma.Decimal(value) : new Prisma.Decimal(0);
+  return value ? new Prisma.Decimal(value.replace(/,/g, "")) : new Prisma.Decimal(0);
 }
 
 function salesPath(status: string): Route {
@@ -51,15 +51,26 @@ function getPaymentStatus(paidAmount: Prisma.Decimal, total: Prisma.Decimal) {
 export async function createInventorySale(formData: FormData) {
   const productId = readString(formData, "productId");
   const customerId = readString(formData, "customerId") || null;
-  const quantity = readDecimal(formData, "quantity");
   const garmentType = readString(formData, "garmentType");
-  const stitchingCharge = readDecimal(formData, "stitchingCharge");
   const dueDateValue = readString(formData, "dueDate");
   const styleNotes = readString(formData, "styleNotes") || null;
-  const discount = readDecimal(formData, "discount");
-  const paidAmount = readDecimal(formData, "paidAmount");
   const paymentMethod = readString(formData, "paymentMethod") || "CASH";
   const note = readString(formData, "note");
+
+  let quantity: Prisma.Decimal;
+  let stitchingCharge: Prisma.Decimal;
+  let discount: Prisma.Decimal;
+  let paidAmount: Prisma.Decimal;
+
+  try {
+    quantity = readDecimal(formData, "quantity");
+    stitchingCharge = readDecimal(formData, "stitchingCharge");
+    discount = readDecimal(formData, "discount");
+    paidAmount = readDecimal(formData, "paidAmount");
+  } catch {
+    redirect(salesPath("invalid-number"));
+  }
+
   const hasInventoryLine = Boolean(productId) && quantity.gt(0);
   const hasStitchingLine = Boolean(garmentType) && stitchingCharge.gt(0);
 
@@ -190,39 +201,46 @@ export async function createInventorySale(formData: FormData) {
 
 export async function addInvoicePayment(formData: FormData) {
   const saleId = readString(formData, "saleId");
-  const amount = readDecimal(formData, "amount");
   const paymentMethod = readString(formData, "paymentMethod") || "CASH";
   const note = readString(formData, "note");
 
-  if (!saleId || amount.lte(0)) {
+  let amount: Prisma.Decimal;
+
+  try {
+    amount = readDecimal(formData, "amount");
+  } catch {
     redirect(`/sales/${saleId}?payment=invalid` as Route);
   }
 
+  if (!saleId || amount.lte(0)) {
+    redirect(saleId ? (`/sales/${saleId}?payment=invalid` as Route) : salesPath("missing"));
+  }
+
+  const sale = await prisma.sale.findUnique({
+    select: {
+      invoiceNumber: true,
+      paidAmount: true,
+      total: true
+    },
+    where: {
+      id: saleId
+    }
+  });
+
+  if (!sale) {
+    redirect(`/sales/${saleId}?payment=not-found` as Route);
+  }
+
+  const remainingBalance = sale.total.sub(sale.paidAmount);
+  const safeAmount = Prisma.Decimal.min(amount, remainingBalance);
+
+  if (safeAmount.lte(0)) {
+    redirect(`/sales/${saleId}?payment=no-balance` as Route);
+  }
+
+  const nextPaidAmount = sale.paidAmount.add(safeAmount);
+
   await prisma.$transaction(async (tx) => {
-    const sale = await tx.sale.findUnique({
-      select: {
-        invoiceNumber: true,
-        paidAmount: true,
-        total: true
-      },
-      where: {
-        id: saleId
-      }
-    });
-
-    if (!sale) {
-      return;
-    }
-
-    const remainingBalance = sale.total.sub(sale.paidAmount);
-    const safeAmount = Prisma.Decimal.min(amount, remainingBalance);
-
-    if (safeAmount.lte(0)) {
-      return;
-    }
-
-    const nextPaidAmount = sale.paidAmount.add(safeAmount);
-
     await tx.payment.create({
       data: {
         amount: safeAmount,

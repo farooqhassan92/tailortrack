@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
 
 import { createSalaryBatch, saveStitchingRate, updateSalaryBatch, voidSalaryBatch } from "./actions";
@@ -27,16 +28,50 @@ type DecimalLike = {
 type SalaryTab = "pending" | "paid";
 
 const statusMessages = {
-  created: "Salary batch created.",
-  empty: "No eligible delivered orders were found for that payment.",
-  missing: "Select at least one delivered stitching order before creating a payment.",
-  "missing-rate": "Set a stitching rate before creating salary for the selected orders.",
-  "batch-missing": "Salary batch was not found.",
-  "batch-updated": "Salary batch updated.",
-  "batch-voided": "Salary batch canceled. Its orders are available in pending payments again.",
-  "rate-missing": "Garment type and tailor rate are required.",
-  "rate-saved": "Stitching rate saved.",
-  "void-reason-missing": "Add a reason before canceling a salary batch."
+  "batch-missing": {
+    text: "Salary batch was not found.",
+    variant: "warning"
+  },
+  "batch-updated": {
+    text: "Salary batch updated.",
+    variant: "success"
+  },
+  "batch-voided": {
+    text: "Salary batch canceled. Its orders are available in pending payments again.",
+    variant: "info"
+  },
+  created: {
+    text: "Salary batch created.",
+    variant: "success"
+  },
+  empty: {
+    text: "No eligible delivered orders were found for that payment.",
+    variant: "warning"
+  },
+  "invalid-number": {
+    text: "Enter valid salary rate numbers before saving.",
+    variant: "warning"
+  },
+  missing: {
+    text: "Select at least one delivered stitching order before creating a payment.",
+    variant: "warning"
+  },
+  "missing-rate": {
+    text: "Set a stitching rate before creating salary for the selected orders.",
+    variant: "warning"
+  },
+  "rate-missing": {
+    text: "Garment type and tailor rate are required.",
+    variant: "warning"
+  },
+  "rate-saved": {
+    text: "Stitching rate saved.",
+    variant: "success"
+  },
+  "void-reason-missing": {
+    text: "Add a reason before canceling a salary batch.",
+    variant: "warning"
+  }
 } as const;
 
 function asNumber(value: DecimalLike | number | null | undefined) {
@@ -105,8 +140,7 @@ export default async function SalariesPage({
   const selectedTailorId = Array.isArray(params?.tailorId) ? params?.tailorId[0] : params?.tailorId;
   const selectedBatchId = Array.isArray(params?.batchId) ? params?.batchId[0] : params?.batchId;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
-  const statusMessage =
-    status && status in statusMessages ? statusMessages[status as keyof typeof statusMessages] : "";
+  const statusMessage = getStatusMessage(statusMessages, status);
   const today = new Date();
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
@@ -303,11 +337,7 @@ export default async function SalariesPage({
           </div>
         </section>
 
-        {statusMessage ? (
-          <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-800">
-            {statusMessage}
-          </div>
-        ) : null}
+        <StatusAlert message={statusMessage} />
 
         <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/90 shadow-sm backdrop-blur">
