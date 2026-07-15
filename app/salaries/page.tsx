@@ -10,7 +10,8 @@ import {
   Eye,
   Pencil,
   Plus,
-  Scissors
+  Scissors,
+  X
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -639,7 +640,7 @@ export default async function SalariesPage({
             <div className="border-b border-slate-100 px-5 py-4">
               <h2 className="text-lg font-semibold text-slate-950">Paid salary history</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Open a paid entry to see the work included in that payment.
+                Open a paid entry to see the work included in that payment, then use Close to hide it.
               </p>
             </div>
 
@@ -680,11 +681,23 @@ export default async function SalariesPage({
                             {formatCurrency(entry.amount)}
                           </span>
                           <Link
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white"
-                            href={`/salaries?tab=paid&batchId=${entry.batch.id}&tailorId=${entry.tailorId}` as Route}
+                            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${
+                              isOpen
+                                ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                : "bg-slate-950 text-white"
+                            }`}
+                            href={
+                              isOpen
+                                ? ("/salaries?tab=paid" as Route)
+                                : (`/salaries?tab=paid&batchId=${entry.batch.id}&tailorId=${entry.tailorId}` as Route)
+                            }
                           >
-                            <Eye aria-hidden="true" className="size-3.5" />
-                            {isOpen ? "Viewing" : "Open"}
+                            {isOpen ? (
+                              <X aria-hidden="true" className="size-3.5" />
+                            ) : (
+                              <Eye aria-hidden="true" className="size-3.5" />
+                            )}
+                            {isOpen ? "Close" : "Open"}
                           </Link>
                         </div>
                       </div>
@@ -735,70 +748,86 @@ export default async function SalariesPage({
                           </div>
 
                           {!entry.isVoided ? (
-                            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-                              <form
-                                action={updateSalaryBatch}
-                                className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-2"
-                              >
-                                <input name="batchId" type="hidden" value={entry.batch.id} />
-                                <input name="tailorId" type="hidden" value={entry.tailorId} />
-                                <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                                  Period start
-                                  <input
-                                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
-                                    defaultValue={dateInputValue(entry.batch.periodStart)}
-                                    name="periodStart"
-                                    type="date"
-                                  />
-                                </label>
-                                <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                                  Period end
-                                  <input
-                                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
-                                    defaultValue={dateInputValue(entry.batch.periodEnd)}
-                                    name="periodEnd"
-                                    type="date"
-                                  />
-                                </label>
-                                <label className="grid gap-1.5 text-sm font-medium text-slate-700 md:col-span-2">
-                                  Notes
-                                  <input
-                                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
-                                    defaultValue={entry.batch.notes ?? ""}
-                                    name="notes"
-                                    placeholder="Payment notes"
-                                  />
-                                </label>
-                                <button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2">
-                                  Save salary details
-                                </button>
-                              </form>
+                            <div className="space-y-3">
+                              <details className="group rounded-2xl border border-slate-100 bg-slate-50">
+                                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-slate-800">
+                                  <Pencil aria-hidden="true" className="size-4" />
+                                  Edit period or notes
+                                  <span className="ml-auto text-xs text-slate-500 group-open:hidden">
+                                    Open
+                                  </span>
+                                  <span className="ml-auto hidden text-xs text-slate-500 group-open:inline">
+                                    Close
+                                  </span>
+                                </summary>
+                                <form
+                                  action={updateSalaryBatch}
+                                  className="grid gap-3 border-t border-slate-100 p-4 md:grid-cols-2"
+                                >
+                                  <input name="batchId" type="hidden" value={entry.batch.id} />
+                                  <input name="tailorId" type="hidden" value={entry.tailorId} />
+                                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                                    Period start
+                                    <input
+                                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
+                                      defaultValue={dateInputValue(entry.batch.periodStart)}
+                                      name="periodStart"
+                                      type="date"
+                                    />
+                                  </label>
+                                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                                    Period end
+                                    <input
+                                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
+                                      defaultValue={dateInputValue(entry.batch.periodEnd)}
+                                      name="periodEnd"
+                                      type="date"
+                                    />
+                                  </label>
+                                  <label className="grid gap-1.5 text-sm font-medium text-slate-700 md:col-span-2">
+                                    Notes
+                                    <input
+                                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-400"
+                                      defaultValue={entry.batch.notes ?? ""}
+                                      name="notes"
+                                      placeholder="Payment notes"
+                                    />
+                                  </label>
+                                  <button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2">
+                                    Save changes
+                                  </button>
+                                </form>
+                              </details>
 
-                              <form
-                                action={voidSalaryBatch}
-                                className="grid gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4"
-                              >
-                                <input name="batchId" type="hidden" value={entry.batch.id} />
-                                <input name="tailorId" type="hidden" value={entry.tailorId} />
-                                <div>
-                                  <h4 className="text-sm font-semibold text-rose-950">
-                                    Cancel salary batch
-                                  </h4>
-                                  <p className="mt-1 text-xs leading-5 text-rose-700">
+                              <details className="group rounded-2xl border border-rose-100 bg-rose-50">
+                                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-rose-800">
+                                  <Ban aria-hidden="true" className="size-4" />
+                                  Cancel salary batch
+                                  <span className="ml-auto text-xs text-rose-600 group-open:hidden">
+                                    Open
+                                  </span>
+                                  <span className="ml-auto hidden text-xs text-rose-600 group-open:inline">
+                                    Close
+                                  </span>
+                                </summary>
+                                <form action={voidSalaryBatch} className="grid gap-3 border-t border-rose-100 p-4">
+                                  <input name="batchId" type="hidden" value={entry.batch.id} />
+                                  <input name="tailorId" type="hidden" value={entry.tailorId} />
+                                  <p className="text-xs leading-5 text-rose-700">
                                     Keeps the history and returns these orders to pending payments.
                                   </p>
-                                </div>
-                                <input
-                                  className="h-11 rounded-xl border border-rose-200 bg-white px-3 text-sm outline-none focus:border-rose-400"
-                                  name="voidReason"
-                                  placeholder="Reason for cancellation"
-                                  required
-                                />
-                                <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-semibold text-white">
-                                  <Ban aria-hidden="true" className="size-4" />
-                                  Cancel batch
-                                </button>
-                              </form>
+                                  <input
+                                    className="h-11 rounded-xl border border-rose-200 bg-white px-3 text-sm outline-none focus:border-rose-400"
+                                    name="voidReason"
+                                    placeholder="Reason for cancellation"
+                                    required
+                                  />
+                                  <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-semibold text-white">
+                                    <Ban aria-hidden="true" className="size-4" />
+                                    Confirm cancel batch
+                                  </button>
+                                </form>
+                              </details>
                             </div>
                           ) : null}
                         </div>
