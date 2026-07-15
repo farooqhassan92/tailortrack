@@ -46,6 +46,10 @@ const statusMessages = {
     text: "Customer profile created.",
     variant: "success"
   },
+  "duplicate-phone": {
+    text: "A customer with this phone number already exists. Search the customer list or use a different phone number.",
+    variant: "warning"
+  },
   "invalid-number": {
     text: "Enter valid measurement numbers before saving the customer.",
     variant: "warning"

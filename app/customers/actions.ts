@@ -21,6 +21,15 @@ function customersPath(status: string): Route {
   return `/customers?status=${status}` as Route;
 }
 
+function isDuplicatePhoneError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    Array.isArray(error.meta?.target) &&
+    error.meta.target.includes("phone")
+  );
+}
+
 function readInitialMeasurement(formData: FormData) {
   return {
     chest: readDecimal(formData, "chest"),
@@ -70,21 +79,29 @@ export async function createCustomer(formData: FormData) {
     redirect(customersPath("invalid-number"));
   }
 
-  await prisma.customer.create({
-    data: {
-      address,
-      ...(hasMeasurementData(measurement)
-        ? {
-            measurements: {
-              create: measurement
+  try {
+    await prisma.customer.create({
+      data: {
+        address,
+        ...(hasMeasurementData(measurement)
+          ? {
+              measurements: {
+                create: measurement
+              }
             }
-          }
-        : {}),
-      name,
-      notes,
-      phone
+          : {}),
+        name,
+        notes,
+        phone
+      }
+    });
+  } catch (error) {
+    if (isDuplicatePhoneError(error)) {
+      redirect(customersPath("duplicate-phone"));
     }
-  });
+
+    throw error;
+  }
 
   revalidatePath("/customers");
   revalidatePath("/measurements");
@@ -103,17 +120,25 @@ export async function updateCustomer(formData: FormData) {
     redirect(customersPath("missing"));
   }
 
-  await prisma.customer.update({
-    data: {
-      address,
-      name,
-      notes,
-      phone
-    },
-    where: {
-      id: customerId
+  try {
+    await prisma.customer.update({
+      data: {
+        address,
+        name,
+        notes,
+        phone
+      },
+      where: {
+        id: customerId
+      }
+    });
+  } catch (error) {
+    if (isDuplicatePhoneError(error)) {
+      redirect(customersPath("duplicate-phone"));
     }
-  });
+
+    throw error;
+  }
 
   revalidatePath("/customers");
   revalidatePath("/sales");

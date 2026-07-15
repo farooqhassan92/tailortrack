@@ -82,6 +82,18 @@ export async function createInventorySale(formData: FormData) {
     redirect(salesPath("customer-required"));
   }
 
+  if (hasStitchingLine && customerId) {
+    const measurementCount = await prisma.customerMeasurement.count({
+      where: {
+        customerId
+      }
+    });
+
+    if (!measurementCount) {
+      redirect(salesPath("measurement-required"));
+    }
+  }
+
   const product = hasInventoryLine
     ? await prisma.product.findFirst({
         where: {
@@ -105,6 +117,11 @@ export async function createInventorySale(formData: FormData) {
   const safeDiscount = Prisma.Decimal.min(discount, subtotal);
   const total = subtotal.sub(safeDiscount);
   const safePaidAmount = Prisma.Decimal.min(paidAmount, total);
+
+  if (!customerId && safePaidAmount.lt(total)) {
+    redirect(salesPath("walk-in-full-payment-required"));
+  }
+
   const paymentStatus = getPaymentStatus(safePaidAmount, total);
 
   const saleId = await prisma.$transaction(async (tx) => {

@@ -66,6 +66,14 @@ const statusMessages = {
     text: "Select a customer before creating a stitching order.",
     variant: "warning"
   },
+  "measurement-required": {
+    text: "This customer has no measurement profile. Add measurements before creating a stitching order.",
+    variant: "warning"
+  },
+  "walk-in-full-payment-required": {
+    text: "Walk-in customers must pay the full invoice amount. Select a customer profile to leave a balance unpaid.",
+    variant: "warning"
+  },
   "invalid-number": {
     text: "Enter valid numbers before creating a sale.",
     variant: "warning"
@@ -106,6 +114,13 @@ export default async function SalesPage({
     }),
     selectedCustomerId
       ? prisma.customer.findFirst({
+          include: {
+            _count: {
+              select: {
+                measurements: true
+              }
+            }
+          },
           where: {
             archivedAt: null,
             id: selectedCustomerId
@@ -273,13 +288,29 @@ export default async function SalesPage({
 
                 {selectedCustomer ? (
                   <div className="mt-4 rounded-2xl border border-sky-100 bg-white p-4">
-                    <p className="text-sm font-semibold text-slate-950">
-                      {selectedCustomer.name}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">{selectedCustomer.phone}</p>
-                    {selectedCustomer.address ? (
-                      <p className="mt-1 text-xs text-slate-500">{selectedCustomer.address}</p>
-                    ) : null}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {selectedCustomer.name}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">{selectedCustomer.phone}</p>
+                        {selectedCustomer.address ? (
+                          <p className="mt-1 text-xs text-slate-500">{selectedCustomer.address}</p>
+                        ) : null}
+                      </div>
+                      {selectedCustomer._count.measurements ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                          Measurements available
+                        </span>
+                      ) : (
+                        <Link
+                          className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+                          href={`/measurements?q=${encodeURIComponent(selectedCustomer.phone)}` as Route}
+                        >
+                          Add measurements
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 ) : null}
 
@@ -338,7 +369,7 @@ export default async function SalesPage({
                   <div>
                     <h3 className="text-sm font-semibold text-slate-950">Stitching service</h3>
                     <p className="text-xs text-slate-500">
-                      Optional. Requires a selected customer and creates a stitching order.
+                      Optional. Requires a selected customer with measurements.
                     </p>
                   </div>
                 </div>
@@ -404,6 +435,9 @@ export default async function SalesPage({
                   step="0.01"
                   type="number"
                 />
+                <span className="text-xs font-normal leading-5 text-slate-500">
+                  Walk-in sales must be fully paid. Select a customer to allow balance.
+                </span>
               </label>
 
               <label className="grid gap-1.5 text-sm font-medium text-slate-700">
