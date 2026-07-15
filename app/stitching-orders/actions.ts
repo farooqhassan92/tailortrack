@@ -16,6 +16,8 @@ const statuses: StitchingStatus[] = [
   "CANCELLED"
 ];
 
+const tailorRequiredStatuses: StitchingStatus[] = ["STITCHING", "READY", "DELIVERED"];
+
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -26,7 +28,9 @@ function readStatus(value: string): StitchingStatus {
 }
 
 function safeReturnTo(value: string) {
-  return value.startsWith("/stitching-orders") ? (value as Route) : ("/stitching-orders" as Route);
+  return value.startsWith("/stitching-orders") || value.startsWith("/production")
+    ? (value as Route)
+    : ("/stitching-orders" as Route);
 }
 
 export async function updateStitchingOrder(formData: FormData) {
@@ -39,6 +43,10 @@ export async function updateStitchingOrder(formData: FormData) {
 
   if (!orderId) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=missing` as Route);
+  }
+
+  if (tailorRequiredStatuses.includes(status) && !tailorId) {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=tailor-required` as Route);
   }
 
   const now = new Date();
@@ -58,6 +66,7 @@ export async function updateStitchingOrder(formData: FormData) {
   });
 
   revalidatePath("/stitching-orders");
+  revalidatePath("/production");
   revalidatePath("/dashboard");
   redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=updated` as Route);
 }

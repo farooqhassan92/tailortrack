@@ -7,6 +7,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Menu,
+  PackageCheck,
   ReceiptText,
   Ruler,
   Scissors,
@@ -22,6 +23,12 @@ const navigation = [
     icon: LayoutDashboard,
     label: "Dashboard",
     iconTone: "bg-teal-50 text-teal-700 group-hover:bg-teal-100 group-hover:text-teal-800"
+  },
+  {
+    href: "/production",
+    icon: PackageCheck,
+    label: "Production",
+    iconTone: "bg-cyan-50 text-cyan-700 group-hover:bg-cyan-100 group-hover:text-cyan-800"
   },
   {
     href: "/inventory",

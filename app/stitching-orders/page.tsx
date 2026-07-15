@@ -40,6 +40,10 @@ const statusMessages = {
     text: "Select a stitching order before updating it.",
     variant: "warning"
   },
+  "tailor-required": {
+    text: "Assign a tailor before moving this order to Stitching, Ready, or Delivered.",
+    variant: "warning"
+  },
   updated: {
     text: "Stitching order updated.",
     variant: "success"
