@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { prisma } from "@/lib/prisma";
 import {
@@ -7,11 +9,14 @@ import {
   FileText,
   PackageCheck,
   ReceiptText,
+  Search,
   ShoppingBag,
+  UserRound,
   Users
 } from "lucide-react";
 
 import { createInventorySale } from "./actions";
+import { BillTotalPreview } from "./bill-total-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -55,21 +60,36 @@ const statusMessages = {
   "insufficient-stock": {
     tone: "border-rose-100 bg-rose-50 text-rose-800",
     text: "Not enough stock is available for that sale quantity."
+  },
+  "customer-required": {
+    tone: "border-amber-100 bg-amber-50 text-amber-800",
+    text: "Select a customer before creating a stitching order."
   }
 } as const;
 
 export default async function SalesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ status?: string | string[] }>;
+  searchParams?: Promise<{
+    customerId?: string | string[];
+    customerQuery?: string | string[];
+    status?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
+  const customerQueryValue = Array.isArray(params?.customerQuery)
+    ? params?.customerQuery[0]
+    : params?.customerQuery;
+  const selectedCustomerId = Array.isArray(params?.customerId)
+    ? params?.customerId[0]
+    : params?.customerId;
+  const customerQuery = customerQueryValue?.trim() ?? "";
   const statusMessage = status && status in statusMessages
     ? statusMessages[status as keyof typeof statusMessages]
     : null;
 
-  const [products, customers, recentSales, totals] = await Promise.all([
+  const [products, selectedCustomer, customerMatches, recentSales, totals] = await Promise.all([
     prisma.product.findMany({
       orderBy: {
         name: "asc"
@@ -81,12 +101,29 @@ export default async function SalesPage({
         }
       }
     }),
-    prisma.customer.findMany({
-      orderBy: {
-        name: "asc"
-      },
-      take: 100
-    }),
+    selectedCustomerId
+      ? prisma.customer.findFirst({
+          where: {
+            archivedAt: null,
+            id: selectedCustomerId
+          }
+        })
+      : null,
+    customerQuery.length >= 2
+      ? prisma.customer.findMany({
+          orderBy: {
+            updatedAt: "desc"
+          },
+          take: 8,
+          where: {
+            archivedAt: null,
+            OR: [
+              { name: { contains: customerQuery, mode: "insensitive" as const } },
+              { phone: { contains: customerQuery, mode: "insensitive" as const } }
+            ]
+          }
+        })
+      : [],
     prisma.sale.findMany({
       include: {
         customer: true,
@@ -106,6 +143,12 @@ export default async function SalesPage({
   ]);
 
   const unpaidBalance = asNumber(totals._sum.total) - asNumber(totals._sum.paidAmount);
+  const billProducts = products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: asNumber(product.sellingPrice),
+    unit: product.unit
+  }));
 
   return (
     <AppShell>
@@ -195,57 +238,150 @@ export default async function SalesPage({
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">Create inventory sale</h2>
                   <p className="text-sm text-slate-500">
-                    Sale price comes from the selected inventory item.
+                    Add inventory, stitching service, or both to one invoice.
                   </p>
                 </div>
               </div>
             </div>
 
             <form action={createInventorySale} className="grid gap-4 p-5 md:grid-cols-2">
-              <label className="grid gap-1.5 text-sm font-medium text-slate-700 md:col-span-2">
-                Inventory item
-                <select
-                  className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                  name="productId"
-                  required
-                >
-                  <option value="">Select item</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} - {formatQuantity(product.quantityOnHand, product.unit)} in
-                      stock - {formatCurrency(product.sellingPrice)} / {product.unit}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 md:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm">
+                      <UserRound aria-hidden="true" className="size-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-950">Customer</p>
+                      <p className="text-xs text-slate-500">
+                        Search by name or phone, or keep this sale as walk-in.
+                      </p>
+                    </div>
+                  </div>
+                  {selectedCustomer ? (
+                    <Link
+                      className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-sky-50 hover:text-sky-700"
+                      href="/sales"
+                    >
+                      Use walk-in
+                    </Link>
+                  ) : (
+                    <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+                      Walk-in selected
+                    </span>
+                  )}
+                </div>
 
-              <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                Quantity sold
-                <input
-                  className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                  min="0.01"
-                  name="quantity"
-                  placeholder="Meters, boxes, or pieces"
-                  required
-                  step="0.01"
-                  type="number"
-                />
-              </label>
+                {selectedCustomer ? (
+                  <div className="mt-4 rounded-2xl border border-sky-100 bg-white p-4">
+                    <p className="text-sm font-semibold text-slate-950">
+                      {selectedCustomer.name}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">{selectedCustomer.phone}</p>
+                    {selectedCustomer.address ? (
+                      <p className="mt-1 text-xs text-slate-500">{selectedCustomer.address}</p>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                Customer
-                <select
-                  className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                  name="customerId"
-                >
-                  <option value="">Walk-in customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <input name="customerId" type="hidden" value={selectedCustomer?.id ?? ""} />
+              </div>
+
+              <section className="rounded-3xl border border-sky-100 bg-sky-50/50 p-4 md:col-span-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm">
+                    <ShoppingBag aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">Inventory item</h3>
+                    <p className="text-xs text-slate-500">
+                      Optional. Stock reduces only when an item and quantity are selected.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-[1fr_14rem]">
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Item
+                    <select
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      name="productId"
+                    >
+                      <option value="">No inventory item</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} - {formatQuantity(product.quantityOnHand, product.unit)}{" "}
+                          in stock - {formatCurrency(product.sellingPrice)} / {product.unit}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Quantity sold
+                    <input
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      min="0.01"
+                      name="quantity"
+                      placeholder="Qty"
+                      step="0.01"
+                      type="number"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-violet-100 bg-violet-50/50 p-4 md:col-span-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-violet-700 shadow-sm">
+                    <ReceiptText aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">Stitching service</h3>
+                    <p className="text-xs text-slate-500">
+                      Optional. Requires a selected customer and creates a stitching order.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Garment type
+                    <input
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      name="garmentType"
+                      placeholder="Shalwar kameez, suit, alteration"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Stitching charge
+                    <input
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      min="0"
+                      name="stitchingCharge"
+                      placeholder="0"
+                      step="0.01"
+                      type="number"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Due date
+                    <input
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      name="dueDate"
+                      type="date"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                    Style notes
+                    <input
+                      className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                      name="styleNotes"
+                      placeholder="Collar, cuffs, fitting notes"
+                    />
+                  </label>
+                </div>
+              </section>
 
               <label className="grid gap-1.5 text-sm font-medium text-slate-700">
                 Discount
@@ -284,6 +420,8 @@ export default async function SalesPage({
                 </select>
               </label>
 
+              <BillTotalPreview products={billProducts} />
+
               <label className="grid gap-1.5 text-sm font-medium text-slate-700">
                 Note
                 <input
@@ -294,8 +432,8 @@ export default async function SalesPage({
               </label>
 
               <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 text-sm leading-6 text-sky-900 md:col-span-2">
-                When the sale is saved, inventory is reduced automatically and a stock-out movement
-                is created with the invoice number.
+                Create inventory-only, stitching-only, or combined invoices. Inventory stock is
+                reduced only for the inventory line; stitching creates a stitching order.
               </div>
 
               <button className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-lg shadow-slate-950/10 md:col-span-2">
@@ -305,6 +443,72 @@ export default async function SalesPage({
           </div>
 
           <aside className="space-y-5">
+            <section className="rounded-3xl border border-white/80 bg-white/80 p-5 shadow-sm backdrop-blur">
+              <div className="flex items-center gap-3">
+                <span className="flex size-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                  <Search aria-hidden="true" className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-950">Find customer</h2>
+                  <p className="text-xs text-slate-500">Search active customers only</p>
+                </div>
+              </div>
+
+              <form action="/sales" className="mt-4 grid gap-3">
+                <input
+                  className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  defaultValue={customerQuery}
+                  name="customerQuery"
+                  placeholder="Name or phone"
+                />
+                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                  Search customer
+                </button>
+              </form>
+
+              <div className="mt-4 space-y-2">
+                {customerQuery && customerQuery.length < 2 ? (
+                  <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">
+                    Type at least 2 characters.
+                  </p>
+                ) : null}
+
+                {customerMatches.map((customer) => {
+                  const href = `/sales?${new URLSearchParams({
+                    customerId: customer.id,
+                    customerQuery
+                  }).toString()}` as Route;
+
+                  return (
+                    <Link
+                      className={`block rounded-2xl border p-3 transition ${
+                        selectedCustomer?.id === customer.id
+                          ? "border-sky-200 bg-sky-50"
+                          : "border-slate-100 bg-white hover:border-sky-100 hover:bg-sky-50/60"
+                      }`}
+                      href={href}
+                      key={customer.id}
+                    >
+                      <p className="text-sm font-semibold text-slate-950">{customer.name}</p>
+                      <p className="mt-1 text-xs text-slate-500">{customer.phone}</p>
+                    </Link>
+                  );
+                })}
+
+                {customerQuery.length >= 2 && !customerMatches.length ? (
+                  <div className="rounded-2xl border border-slate-100 bg-white p-3">
+                    <p className="text-sm font-semibold text-slate-950">No customer found</p>
+                    <Link
+                      className="mt-2 inline-flex rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700"
+                      href="/customers"
+                    >
+                      Add new customer
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
             <section className="rounded-3xl border border-white/80 bg-white/80 p-5 shadow-sm backdrop-blur">
               <div className="flex items-center gap-3">
                 <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
@@ -336,7 +540,11 @@ export default async function SalesPage({
               <div className="mt-4 divide-y divide-slate-100">
                 {recentSales.length ? (
                   recentSales.map((sale) => (
-                    <div className="py-3" key={sale.id}>
+                    <Link
+                      className="block py-3 transition hover:bg-sky-50/50"
+                      href={`/sales/${sale.id}`}
+                      key={sale.id}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-950">
@@ -350,7 +558,8 @@ export default async function SalesPage({
                           {formatCurrency(sale.total)}
                         </p>
                       </div>
-                    </div>
+                      <p className="mt-2 text-xs font-semibold text-sky-700">Open invoice</p>
+                    </Link>
                   ))
                 ) : (
                   <p className="py-3 text-sm text-slate-500">No sales yet.</p>

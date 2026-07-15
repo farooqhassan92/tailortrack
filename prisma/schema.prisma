@@ -60,8 +60,12 @@ model Customer {
   measurements    CustomerMeasurement[]
   sales           Sale[]
   stitchingOrders StitchingOrder[]
+  archivedAt      DateTime?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+
+  @@index([archivedAt])
+  @@index([name])
 }
 
 model CustomerMeasurement {

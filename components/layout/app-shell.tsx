@@ -71,17 +71,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)]">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 overflow-hidden border-r border-white/80 bg-white/80 text-slate-800 shadow-[18px_0_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl lg:block">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_7%,rgba(20,184,166,0.2),transparent_15rem),radial-gradient(circle_at_92%_22%,rgba(244,114,182,0.16),transparent_14rem),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.7)_48%,rgba(236,253,245,0.52))]" />
+      <aside className="fixed inset-y-0 left-0 hidden w-72 overflow-hidden border-r border-white/80 bg-slate-50/90 text-slate-800 shadow-[18px_0_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl lg:block">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(14,165,233,0.18),transparent_15rem),radial-gradient(circle_at_92%_24%,rgba(20,184,166,0.16),transparent_14rem),radial-gradient(circle_at_35%_78%,rgba(139,92,246,0.12),transparent_16rem),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.76)_48%,rgba(240,249,255,0.68))]" />
         <div className="relative flex h-full flex-col">
           <div className="border-b border-white/80 p-5">
             <Link className="flex items-center gap-3" href="/dashboard">
-              <span className="flex size-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-xl shadow-slate-950/15">
+              <span className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-teal-500 to-violet-600 text-white shadow-xl shadow-sky-900/20">
                 <Shirt aria-hidden="true" className="size-5" />
               </span>
               <span>
                 <span className="block text-lg font-semibold text-slate-950">TailorTrack</span>
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
                   Shop studio
                 </span>
               </span>
@@ -97,8 +97,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   className={`group flex items-center gap-3 rounded-2xl px-3 py-3 transition duration-200 ${
                     isActive
-                      ? "bg-slate-950 text-white shadow-xl shadow-slate-950/15"
-                      : "hover:bg-white/80 hover:text-slate-950 hover:shadow-sm"
+                      ? "bg-gradient-to-r from-slate-950 to-slate-800 text-white shadow-xl shadow-slate-950/15"
+                      : "hover:bg-white/85 hover:text-slate-950 hover:shadow-sm"
                   }`}
                   href={item.href}
                   key={item.href}
@@ -119,7 +119,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="mt-auto border-t border-white/80 p-5">
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur">
+            <div className="rounded-3xl border border-sky-100/80 bg-gradient-to-br from-white to-sky-50/80 p-4 shadow-sm backdrop-blur">
+              <div className="mb-3 flex size-9 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                <ClipboardList aria-hidden="true" className="size-4" />
+              </div>
               <p className="text-sm font-semibold text-slate-950">Today&apos;s Focus</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">
                 Keep inventory, sales, and stitching work updated as orders move.
