@@ -19,6 +19,7 @@ import {
 
 import { createInventorySale } from "./actions";
 import { BillTotalPreview } from "./bill-total-preview";
+import { GuidedSaleForm } from "./guided-sale-form";
 
 export const dynamic = "force-dynamic";
 
@@ -176,8 +177,18 @@ export default async function SalesPage({
     id: product.id,
     name: product.name,
     price: asNumber(product.sellingPrice),
+    quantityOnHand: asNumber(product.quantityOnHand),
     unit: product.unit
   }));
+  const guidedCustomer = selectedCustomer
+    ? {
+        address: selectedCustomer.address,
+        id: selectedCustomer.id,
+        measurementCount: selectedCustomer._count.measurements,
+        name: selectedCustomer.name,
+        phone: selectedCustomer.phone
+      }
+    : null;
 
   return (
     <AppShell>
@@ -263,13 +274,15 @@ export default async function SalesPage({
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">Create inventory sale</h2>
                   <p className="text-sm text-slate-500">
-                    Add inventory, stitching service, or both to one invoice.
+                    Follow the guided flow to create inventory, stitching, or combined invoices.
                   </p>
                 </div>
               </div>
             </div>
 
-            <form action={createInventorySale} className="grid gap-4 p-5 md:grid-cols-2">
+            <GuidedSaleForm products={billProducts} selectedCustomer={guidedCustomer} />
+
+            <form action={createInventorySale} className="hidden">
               <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4 md:col-span-2">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3">

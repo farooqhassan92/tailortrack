@@ -17,11 +17,11 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <button
-        aria-label="Logout"
+        aria-label="Sign out"
         className="flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isPending}
         onClick={handleLogout}
-        title="Logout"
+        title="Sign out"
         type="button"
       >
         <LogOut aria-hidden="true" className="size-4" />
@@ -31,13 +31,13 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
 
   return (
     <button
-      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-950/10 transition hover:border-rose-700 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
       disabled={isPending}
       onClick={handleLogout}
       type="button"
     >
       <LogOut aria-hidden="true" className="size-4" />
-      {isPending ? "Logging out..." : "Logout"}
+      {isPending ? "Signing out..." : "Sign out"}
     </button>
   );
 }

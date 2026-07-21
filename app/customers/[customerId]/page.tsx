@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileText,
   Phone,
+  PlusCircle,
   ReceiptText,
   Ruler,
   Scissors,
@@ -323,7 +324,23 @@ export default async function CustomerDetailPage({
                   {customer.address ? <span>{customer.address}</span> : null}
                 </div>
                 <div className="mt-5">
-                  <StatementPrintButton />
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-950 shadow-sm"
+                      href={`/sales?customerId=${customer.id}` as Route}
+                    >
+                      <PlusCircle aria-hidden="true" className="size-3.5" />
+                      New sale
+                    </Link>
+                    <Link
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-white"
+                      href={`/measurements?q=${encodeURIComponent(customer.phone)}` as Route}
+                    >
+                      <Ruler aria-hidden="true" className="size-3.5" />
+                      Measurements
+                    </Link>
+                    <StatementPrintButton />
+                  </div>
                 </div>
               </div>
 
@@ -530,7 +547,12 @@ function InvoiceTable({
               );
             })
           ) : (
-            <EmptyTable colSpan={8} text="No invoices for this customer yet." />
+            <EmptyTable
+              actionHref={"/sales" as Route}
+              actionLabel="Create sale"
+              colSpan={8}
+              text="No invoices for this customer yet."
+            />
           )}
         </tbody>
       </table>
@@ -605,7 +627,12 @@ function OrderTable({
               );
             })
           ) : (
-            <EmptyTable colSpan={7} text="No stitching orders for this customer yet." />
+            <EmptyTable
+              actionHref={"/sales" as Route}
+              actionLabel="Create stitching sale"
+              colSpan={7}
+              text="No stitching orders for this customer yet."
+            />
           )}
         </tbody>
       </table>
@@ -661,7 +688,12 @@ function PaymentTable({
           </div>
         ))
       ) : (
-        <div className="p-10 text-center text-sm text-slate-500">No payments recorded yet.</div>
+        <div className="p-10 text-center">
+          <p className="text-sm font-semibold text-slate-950">No payments recorded yet.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Payments will appear here after invoices are created or settled.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -714,18 +746,43 @@ function MeasurementList({
         ))
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-500 lg:col-span-2">
-          No measurement profiles saved for this customer.
+          <p className="font-semibold text-slate-950">No measurement profiles saved.</p>
+          <p className="mt-1">Add measurements before creating stitching work.</p>
+          <Link
+            className="mt-4 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+            href={"/measurements" as Route}
+          >
+            Add measurements
+          </Link>
         </div>
       )}
     </div>
   );
 }
 
-function EmptyTable({ colSpan, text }: { colSpan: number; text: string }) {
+function EmptyTable({
+  actionHref,
+  actionLabel,
+  colSpan,
+  text
+}: {
+  actionHref?: Route;
+  actionLabel?: string;
+  colSpan: number;
+  text: string;
+}) {
   return (
     <tr>
       <td className="px-5 py-10 text-center text-slate-500" colSpan={colSpan}>
-        {text}
+        <p className="font-semibold text-slate-950">{text}</p>
+        {actionHref && actionLabel ? (
+          <Link
+            className="mt-4 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+            href={actionHref}
+          >
+            {actionLabel}
+          </Link>
+        ) : null}
       </td>
     </tr>
   );

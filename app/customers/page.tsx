@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 import {
@@ -368,9 +369,12 @@ export default async function CustomersPage({
                             name="notes"
                             placeholder="Notes"
                           />
-                          <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2">
+                          <PendingSubmitButton
+                            className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+                            pendingText="Saving..."
+                          >
                             Save customer
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </details>
                     </div>
@@ -462,9 +466,12 @@ export default async function CustomersPage({
                     />
                   </div>
                 </details>
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Adding..."
+                >
                   Add customer
-                </button>
+                </PendingSubmitButton>
               </form>
             </details>
 
