@@ -10,8 +10,28 @@ import { createBusinessProfile } from "./actions";
 export const dynamic = "force-dynamic";
 
 const statusMessages = {
-  "missing-name": {
-    text: "Business or shop name is required before you can continue.",
+  "address-too-long": {
+    text: "Business address must be 180 characters or less.",
+    variant: "warning"
+  },
+  "city-too-long": {
+    text: "City must be 60 characters or less.",
+    variant: "warning"
+  },
+  "footer-too-long": {
+    text: "Invoice footer must be 160 characters or less.",
+    variant: "warning"
+  },
+  "invalid-name": {
+    text: "Business or shop name must be at least 2 characters.",
+    variant: "warning"
+  },
+  "invalid-phone": {
+    text: "Enter a valid phone number using digits, spaces, +, -, or brackets.",
+    variant: "warning"
+  },
+  "name-too-long": {
+    text: "Business or shop name must be 80 characters or less.",
     variant: "warning"
   }
 } as const;
@@ -77,6 +97,8 @@ export default async function BusinessProfilePage({
                 <Building2 aria-hidden="true" className="size-4 text-slate-400" />
                 <input
                   className="w-full bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
+                  maxLength={80}
+                  minLength={2}
                   name="name"
                   placeholder="Al Noor Tailors"
                   required
@@ -90,7 +112,9 @@ export default async function BusinessProfilePage({
                 <Phone aria-hidden="true" className="size-4 text-slate-400" />
                 <input
                   className="w-full bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
+                  maxLength={24}
                   name="phone"
+                  pattern="[+()\\-\\s0-9]{7,24}"
                   placeholder="0300 0000000"
                 />
               </span>
@@ -102,6 +126,7 @@ export default async function BusinessProfilePage({
                 <MapPin aria-hidden="true" className="size-4 text-slate-400" />
                 <input
                   className="w-full bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
+                  maxLength={60}
                   name="city"
                   placeholder="Lahore"
                 />
@@ -112,6 +137,7 @@ export default async function BusinessProfilePage({
               <span className="text-sm font-semibold text-slate-800">Business address</span>
               <textarea
                 className="min-h-24 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white"
+                maxLength={180}
                 name="address"
                 placeholder="Shop address"
               />

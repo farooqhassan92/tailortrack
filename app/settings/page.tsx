@@ -9,8 +9,28 @@ import { updateBusinessProfile } from "./actions";
 export const dynamic = "force-dynamic";
 
 const statusMessages = {
-  "missing-name": {
-    text: "Business or shop name is required.",
+  "address-too-long": {
+    text: "Business address must be 180 characters or less.",
+    variant: "warning"
+  },
+  "city-too-long": {
+    text: "City must be 60 characters or less.",
+    variant: "warning"
+  },
+  "footer-too-long": {
+    text: "Invoice footer must be 160 characters or less.",
+    variant: "warning"
+  },
+  "invalid-name": {
+    text: "Business or shop name must be at least 2 characters.",
+    variant: "warning"
+  },
+  "invalid-phone": {
+    text: "Enter a valid phone number using digits, spaces, +, -, or brackets.",
+    variant: "warning"
+  },
+  "name-too-long": {
+    text: "Business or shop name must be 80 characters or less.",
     variant: "warning"
   },
   updated: {
@@ -75,6 +95,8 @@ export default async function SettingsPage({
                   <input
                     className="w-full bg-transparent text-sm text-slate-950 outline-none"
                     defaultValue={organization.name}
+                    maxLength={80}
+                    minLength={2}
                     name="name"
                     required
                   />
@@ -88,7 +110,9 @@ export default async function SettingsPage({
                   <input
                     className="w-full bg-transparent text-sm text-slate-950 outline-none"
                     defaultValue={organization.phone ?? ""}
+                    maxLength={24}
                     name="phone"
+                    pattern="[+()\\-\\s0-9]{7,24}"
                     placeholder="0300 0000000"
                   />
                 </span>
@@ -101,6 +125,7 @@ export default async function SettingsPage({
                   <input
                     className="w-full bg-transparent text-sm text-slate-950 outline-none"
                     defaultValue={organization.city ?? ""}
+                    maxLength={60}
                     name="city"
                     placeholder="Lahore"
                   />
@@ -112,6 +137,7 @@ export default async function SettingsPage({
                 <textarea
                   className="min-h-24 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                   defaultValue={organization.address ?? ""}
+                  maxLength={180}
                   name="address"
                   placeholder="Shop address"
                 />
@@ -122,6 +148,7 @@ export default async function SettingsPage({
                 <textarea
                   className="min-h-20 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
                   defaultValue={organization.invoiceFooter ?? ""}
+                  maxLength={160}
                   name="invoiceFooter"
                   placeholder="Thank you for your business."
                 />

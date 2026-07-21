@@ -4,13 +4,9 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { parseBusinessProfileForm } from "@/lib/business-profile-validation";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
-
-function readString(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
 
 function settingsPath(status: string): Route {
   return `/settings?status=${status}` as Route;
@@ -18,23 +14,19 @@ function settingsPath(status: string): Route {
 
 export async function updateBusinessProfile(formData: FormData) {
   const organizationId = await getCurrentOrganizationId();
-  const name = readString(formData, "name");
-  const phone = readString(formData, "phone") || null;
-  const city = readString(formData, "city") || null;
-  const address = readString(formData, "address") || null;
-  const invoiceFooter = readString(formData, "invoiceFooter") || null;
+  const profileInput = parseBusinessProfileForm(formData);
 
-  if (!name) {
-    redirect(settingsPath("missing-name"));
+  if (!profileInput.success) {
+    redirect(settingsPath(profileInput.status));
   }
 
   await prisma.organization.update({
     data: {
-      address,
-      city,
-      invoiceFooter,
-      name,
-      phone,
+      address: profileInput.data.address,
+      city: profileInput.data.city,
+      invoiceFooter: profileInput.data.invoiceFooter,
+      name: profileInput.data.name,
+      phone: profileInput.data.phone,
       profileCompletedAt: new Date()
     },
     where: {

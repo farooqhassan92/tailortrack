@@ -3,13 +3,9 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 
+import { parseBusinessProfileForm } from "@/lib/business-profile-validation";
 import { getSignedInUserProfile } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
-
-function readString(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim() : "";
-}
 
 function businessProfilePath(status: string): Route {
   return `/business-profile?status=${status}` as Route;
@@ -39,13 +35,10 @@ async function uniqueOrganizationSlug(name: string) {
 
 export async function createBusinessProfile(formData: FormData) {
   const profile = await getSignedInUserProfile();
-  const name = readString(formData, "name");
-  const phone = readString(formData, "phone") || null;
-  const city = readString(formData, "city") || null;
-  const address = readString(formData, "address") || null;
+  const profileInput = parseBusinessProfileForm(formData);
 
-  if (!name) {
-    redirect(businessProfilePath("missing-name"));
+  if (!profileInput.success) {
+    redirect(businessProfilePath(profileInput.status));
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -70,7 +63,7 @@ export async function createBusinessProfile(formData: FormData) {
     redirect("/dashboard");
   }
 
-  const slug = await uniqueOrganizationSlug(name);
+  const slug = await uniqueOrganizationSlug(profileInput.data.name);
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.upsert({
@@ -88,10 +81,11 @@ export async function createBusinessProfile(formData: FormData) {
 
     const organization = await tx.organization.create({
       data: {
-        address,
-        city,
-        name,
-        phone,
+        address: profileInput.data.address,
+        city: profileInput.data.city,
+        invoiceFooter: profileInput.data.invoiceFooter,
+        name: profileInput.data.name,
+        phone: profileInput.data.phone,
         profileCompletedAt: new Date(),
         slug
       }
