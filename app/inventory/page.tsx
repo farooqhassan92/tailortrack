@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 import {
   AlertTriangle,
@@ -199,6 +200,7 @@ export default async function Page({
     status?: string | string[];
   }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedCategory = Array.isArray(params?.category)
     ? params?.category[0]
@@ -213,6 +215,7 @@ export default async function Page({
 
   const where = {
     archivedAt: null,
+    organizationId,
     ...(categoryFilter ? { category: categoryFilter } : {}),
     ...(normalizedQuery
       ? {
@@ -236,6 +239,7 @@ export default async function Page({
     prisma.product.findMany({
       where: {
         archivedAt: null,
+        organizationId,
         type: {
           not: "STITCHING_SERVICE"
         }
@@ -248,7 +252,10 @@ export default async function Page({
       orderBy: {
         createdAt: "desc"
       },
-      take: 5
+      take: 5,
+      where: {
+        organizationId
+      }
     })
   ]);
 

@@ -16,6 +16,7 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { createSalaryBatch, saveStitchingRate, updateSalaryBatch, voidSalaryBatch } from "./actions";
@@ -136,6 +137,7 @@ export default async function SalariesPage({
     tailorId?: string | string[];
   }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedTab = getSelectedTab(params?.tab);
   const selectedTailorId = Array.isArray(params?.tailorId) ? params?.tailorId[0] : params?.tailorId;
@@ -169,6 +171,7 @@ export default async function SalariesPage({
             }
           }
         },
+        organizationId,
         status: {
           in: ["READY", "DELIVERED"]
         },
@@ -196,7 +199,10 @@ export default async function SalariesPage({
       orderBy: {
         createdAt: "desc"
       },
-      take: 30
+      take: 30,
+      where: {
+        organizationId
+      }
     }),
     prisma.tailorSalaryBatch.aggregate({
       _sum: {
@@ -204,6 +210,7 @@ export default async function SalariesPage({
       },
       _count: true,
       where: {
+        organizationId,
         voidedAt: null
       }
     }),
@@ -213,6 +220,7 @@ export default async function SalariesPage({
       },
       where: {
         archivedAt: null,
+        organizationId,
         type: "STITCHING_SERVICE"
       }
     })

@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 function readString(formData: FormData, key: string) {
@@ -38,10 +39,23 @@ function measurementData(formData: FormData) {
 }
 
 export async function createMeasurement(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const customerId = readString(formData, "customerId");
   const returnTo = safeReturnTo(readString(formData, "returnTo"));
 
   if (!customerId) {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=missing` as Route);
+  }
+
+  const customerCount = await prisma.customer.count({
+    where: {
+      archivedAt: null,
+      id: customerId,
+      organizationId
+    }
+  });
+
+  if (!customerCount) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=missing` as Route);
   }
 
@@ -56,7 +70,8 @@ export async function createMeasurement(formData: FormData) {
   await prisma.customerMeasurement.create({
     data: {
       ...data,
-      customerId
+      customerId,
+      organizationId
     }
   });
 
@@ -67,6 +82,7 @@ export async function createMeasurement(formData: FormData) {
 }
 
 export async function updateMeasurement(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const measurementId = readString(formData, "measurementId");
   const returnTo = safeReturnTo(readString(formData, "returnTo"));
 
@@ -82,10 +98,11 @@ export async function updateMeasurement(formData: FormData) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}status=invalid-number` as Route);
   }
 
-  await prisma.customerMeasurement.update({
+  await prisma.customerMeasurement.updateMany({
     data,
     where: {
-      id: measurementId
+      id: measurementId,
+      organizationId
     }
   });
 

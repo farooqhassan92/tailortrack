@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 const categoryValues = Object.values(ExpenseCategory);
@@ -40,6 +41,7 @@ function revalidateExpenses() {
 }
 
 export async function createExpense(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const category = readCategory(formData);
   const description = readString(formData, "description");
   const note = readString(formData, "note") || null;
@@ -63,6 +65,7 @@ export async function createExpense(formData: FormData) {
       category,
       description,
       note,
+      organizationId,
       spentAt
     }
   });
@@ -72,6 +75,7 @@ export async function createExpense(formData: FormData) {
 }
 
 export async function updateExpense(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const expenseId = readString(formData, "expenseId");
   const category = readCategory(formData);
   const description = readString(formData, "description");
@@ -90,7 +94,7 @@ export async function updateExpense(formData: FormData) {
     redirect(expensesPath("missing"));
   }
 
-  await prisma.expense.update({
+  await prisma.expense.updateMany({
     data: {
       amount,
       category,
@@ -99,7 +103,8 @@ export async function updateExpense(formData: FormData) {
       spentAt
     },
     where: {
-      id: expenseId
+      id: expenseId,
+      organizationId
     }
   });
 
@@ -108,15 +113,17 @@ export async function updateExpense(formData: FormData) {
 }
 
 export async function deleteExpense(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const expenseId = readString(formData, "expenseId");
 
   if (!expenseId) {
     redirect(expensesPath("missing"));
   }
 
-  await prisma.expense.delete({
+  await prisma.expense.deleteMany({
     where: {
-      id: expenseId
+      id: expenseId,
+      organizationId
     }
   });
 

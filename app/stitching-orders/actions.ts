@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 const statuses: StitchingStatus[] = [
@@ -34,6 +35,7 @@ function safeReturnTo(value: string) {
 }
 
 export async function updateStitchingOrder(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const orderId = readString(formData, "orderId");
   const status = readStatus(readString(formData, "status"));
   const tailorId = readString(formData, "tailorId") || null;
@@ -49,9 +51,23 @@ export async function updateStitchingOrder(formData: FormData) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=tailor-required` as Route);
   }
 
+  if (tailorId) {
+    const tailorCount = await prisma.tailor.count({
+      where: {
+        active: true,
+        id: tailorId,
+        organizationId
+      }
+    });
+
+    if (!tailorCount) {
+      redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=tailor-required` as Route);
+    }
+  }
+
   const now = new Date();
 
-  await prisma.stitchingOrder.update({
+  await prisma.stitchingOrder.updateMany({
     data: {
       completedAt: status === "READY" || status === "DELIVERED" ? now : undefined,
       deliveredAt: status === "DELIVERED" ? now : undefined,
@@ -61,7 +77,8 @@ export async function updateStitchingOrder(formData: FormData) {
       tailorId
     },
     where: {
-      id: orderId
+      id: orderId,
+      organizationId
     }
   });
 

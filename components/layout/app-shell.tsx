@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import {
   Boxes,
   ChartNoAxesCombined,
@@ -11,12 +12,22 @@ import {
   ReceiptText,
   Ruler,
   Scissors,
+  Settings,
   Shirt,
   Users,
   WalletCards
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { LogoutButton } from "@/components/auth/logout-button";
+
+type BusinessProfile = {
+  city: string | null;
+  name: string;
+  phone: string | null;
+};
 
 const navigation = [
   {
@@ -84,11 +95,41 @@ const navigation = [
     icon: WalletCards,
     label: "Expenses",
     iconTone: "bg-rose-50 text-rose-700 group-hover:bg-rose-100 group-hover:text-rose-800"
+  },
+  {
+    href: "/settings",
+    icon: Settings,
+    label: "Settings",
+    iconTone: "bg-slate-100 text-slate-700 group-hover:bg-slate-200 group-hover:text-slate-900"
   }
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+  const businessName = businessProfile?.name ?? "TailorTrack";
+  const businessMeta = [businessProfile?.city, businessProfile?.phone].filter(Boolean).join(" | ");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/business-profile", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((profile: BusinessProfile | null) => {
+        if (isMounted && profile) {
+          setBusinessProfile(profile);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setBusinessProfile(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)] print:bg-white">
@@ -101,9 +142,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Shirt aria-hidden="true" className="size-5" />
               </span>
               <span>
-                <span className="block text-lg font-semibold text-slate-950">TailorTrack</span>
+                <span className="block truncate text-lg font-semibold text-slate-950">
+                  {businessName}
+                </span>
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                  Shop studio
+                  {businessMeta || "TailorTrack"}
                 </span>
               </span>
             </Link>
@@ -140,14 +183,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="mt-auto border-t border-white/80 p-5">
-            <div className="rounded-3xl border border-sky-100/80 bg-gradient-to-br from-white to-sky-50/80 p-4 shadow-sm backdrop-blur">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
-                <ClipboardList aria-hidden="true" className="size-4" />
+            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm backdrop-blur">
+              <div className="flex items-center gap-3">
+                <UserButton />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-950">{businessName}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {businessMeta || "Business profile"}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-slate-950">Today&apos;s Focus</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
-                Keep inventory, sales, and stitching work updated as orders move.
-              </p>
+              <LogoutButton />
             </div>
           </div>
         </div>
@@ -162,16 +208,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-lg font-semibold text-slate-950">
-                  TailorTrack
+                  {businessName}
                 </span>
                 <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700">
-                  Studio
+                  {businessMeta || "TailorTrack"}
                 </span>
               </span>
             </Link>
-            <span className="flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700">
-              <Menu aria-hidden="true" className="size-5" />
-            </span>
+            <div className="flex items-center gap-2">
+              <UserButton />
+              <LogoutButton compact />
+              <span className="flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700">
+                <Menu aria-hidden="true" className="size-5" />
+              </span>
+            </div>
           </div>
           <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 text-sm font-semibold text-slate-600">
             {navigation.map((item) => {

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 function readString(formData: FormData, key: string) {
@@ -62,6 +63,7 @@ function hasMeasurementData(measurement: ReturnType<typeof readInitialMeasuremen
 }
 
 export async function createCustomer(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const name = readString(formData, "name");
   const phone = readString(formData, "phone");
   const address = readString(formData, "address") || null;
@@ -83,10 +85,14 @@ export async function createCustomer(formData: FormData) {
     await prisma.customer.create({
       data: {
         address,
+        organizationId,
         ...(hasMeasurementData(measurement)
           ? {
               measurements: {
-                create: measurement
+                create: {
+                  ...measurement,
+                  organizationId
+                }
               }
             }
           : {}),
@@ -110,6 +116,7 @@ export async function createCustomer(formData: FormData) {
 }
 
 export async function updateCustomer(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const customerId = readString(formData, "customerId");
   const name = readString(formData, "name");
   const phone = readString(formData, "phone");
@@ -121,7 +128,7 @@ export async function updateCustomer(formData: FormData) {
   }
 
   try {
-    await prisma.customer.update({
+    await prisma.customer.updateMany({
       data: {
         address,
         name,
@@ -129,7 +136,8 @@ export async function updateCustomer(formData: FormData) {
         phone
       },
       where: {
-        id: customerId
+        id: customerId,
+        organizationId
       }
     });
   } catch (error) {
@@ -146,6 +154,7 @@ export async function updateCustomer(formData: FormData) {
 }
 
 export async function archiveOrDeleteCustomer(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const customerId = readString(formData, "customerId");
 
   if (!customerId) {
@@ -155,34 +164,39 @@ export async function archiveOrDeleteCustomer(formData: FormData) {
   const [saleCount, stitchingOrderCount, measurementCount] = await Promise.all([
     prisma.sale.count({
       where: {
-        customerId
+        customerId,
+        organizationId
       }
     }),
     prisma.stitchingOrder.count({
       where: {
-        customerId
+        customerId,
+        organizationId
       }
     }),
     prisma.customerMeasurement.count({
       where: {
-        customerId
+        customerId,
+        organizationId
       }
     })
   ]);
 
   if (saleCount || stitchingOrderCount || measurementCount) {
-    await prisma.customer.update({
+    await prisma.customer.updateMany({
       data: {
         archivedAt: new Date()
       },
       where: {
-        id: customerId
+        id: customerId,
+        organizationId
       }
     });
   } else {
-    await prisma.customer.delete({
+    await prisma.customer.deleteMany({
       where: {
-        id: customerId
+        id: customerId,
+        organizationId
       }
     });
   }

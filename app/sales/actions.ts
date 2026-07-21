@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 function readString(formData: FormData, key: string) {
@@ -49,6 +50,7 @@ function getPaymentStatus(paidAmount: Prisma.Decimal, total: Prisma.Decimal) {
 }
 
 export async function createInventorySale(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
   const customerId = readString(formData, "customerId") || null;
   const garmentType = readString(formData, "garmentType");
@@ -78,6 +80,20 @@ export async function createInventorySale(formData: FormData) {
     redirect(salesPath("missing"));
   }
 
+  if (customerId) {
+    const customerCount = await prisma.customer.count({
+      where: {
+        archivedAt: null,
+        id: customerId,
+        organizationId
+      }
+    });
+
+    if (!customerCount) {
+      redirect(salesPath("customer-required"));
+    }
+  }
+
   if (hasStitchingLine && !customerId) {
     redirect(salesPath("customer-required"));
   }
@@ -85,7 +101,8 @@ export async function createInventorySale(formData: FormData) {
   if (hasStitchingLine && customerId) {
     const measurementCount = await prisma.customerMeasurement.count({
       where: {
-        customerId
+        customerId,
+        organizationId
       }
     });
 
@@ -98,7 +115,8 @@ export async function createInventorySale(formData: FormData) {
     ? await prisma.product.findFirst({
         where: {
           archivedAt: null,
-          id: productId
+          id: productId,
+          organizationId
         }
       })
     : null;
@@ -130,6 +148,7 @@ export async function createInventorySale(formData: FormData) {
         customerId,
         discount: safeDiscount,
         invoiceNumber,
+        organizationId,
         paidAmount: safePaidAmount,
         paymentStatus,
         subtotal,
@@ -161,9 +180,10 @@ export async function createInventorySale(formData: FormData) {
       });
 
       await tx.inventoryMovement.create({
-        data: {
-          note: `Sold on ${invoiceNumber}${note ? ` - ${note}` : ""}`,
-          productId: product.id,
+          data: {
+            note: `Sold on ${invoiceNumber}${note ? ` - ${note}` : ""}`,
+            organizationId,
+            productId: product.id,
           quantity: quantity.mul(-1),
           type: "SALE"
         }
@@ -176,6 +196,7 @@ export async function createInventorySale(formData: FormData) {
           customerId,
           dueDate: dueDateValue ? new Date(dueDateValue) : null,
           garmentType,
+          organizationId,
           orderNumber: makeStitchingOrderNumber(),
           stitchingCharge,
           styleNotes
@@ -217,6 +238,7 @@ export async function createInventorySale(formData: FormData) {
 }
 
 export async function addInvoicePayment(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const saleId = readString(formData, "saleId");
   const paymentMethod = readString(formData, "paymentMethod") || "CASH";
   const note = readString(formData, "note");
@@ -240,7 +262,8 @@ export async function addInvoicePayment(formData: FormData) {
       total: true
     },
     where: {
-      id: saleId
+      id: saleId,
+      organizationId
     }
   });
 

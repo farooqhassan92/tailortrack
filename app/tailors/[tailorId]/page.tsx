@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,7 @@ export default async function TailorDetailPage({
   params: Promise<{ tailorId: string }>;
   searchParams?: Promise<{ tab?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const [{ tailorId }, queryParams] = await Promise.all([params, searchParams]);
   const selectedTab = getSelectedTab(queryParams?.tab);
 
@@ -129,12 +131,14 @@ export default async function TailorDetailPage({
         }
       },
       where: {
-        id: tailorId
+        id: tailorId,
+        organizationId
       }
     }),
     prisma.product.findMany({
       where: {
         archivedAt: null,
+        organizationId,
         type: "STITCHING_SERVICE"
       }
     })

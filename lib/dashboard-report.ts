@@ -1,3 +1,4 @@
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 export const periodOptions = [
@@ -96,6 +97,7 @@ export function getSelectedPeriod(value: string | string[] | undefined): PeriodV
 }
 
 export async function getDashboardReport(period: PeriodValue) {
+  const organizationId = await getCurrentOrganizationId();
   const now = new Date();
   const startDate = getPeriodStart(period, now);
   const selectedPeriodLabel =
@@ -104,9 +106,11 @@ export async function getDashboardReport(period: PeriodValue) {
     createdAt: {
       gte: startDate,
       lte: now
-    }
+    },
+    organizationId
   };
   const expensePeriodWhere = {
+    organizationId,
     spentAt: {
       gte: startDate,
       lte: now
@@ -211,6 +215,7 @@ export async function getDashboardReport(period: PeriodValue) {
       },
       take: 8,
       where: {
+        organizationId,
         archivedAt: null,
         quantityOnHand: {
           lte: 5
@@ -222,6 +227,7 @@ export async function getDashboardReport(period: PeriodValue) {
     }),
     prisma.product.count({
       where: {
+        organizationId,
         archivedAt: null,
         type: {
           not: "STITCHING_SERVICE"
@@ -230,7 +236,8 @@ export async function getDashboardReport(period: PeriodValue) {
     }),
     prisma.customer.count({
       where: {
-        archivedAt: null
+        archivedAt: null,
+        organizationId
       }
     }),
     prisma.expense.aggregate({
@@ -279,6 +286,7 @@ export async function getDashboardReport(period: PeriodValue) {
         status: {
           in: ["READY", "DELIVERED"]
         },
+        organizationId,
         tailorId: {
           not: null
         }
@@ -291,6 +299,7 @@ export async function getDashboardReport(period: PeriodValue) {
       },
       where: {
         archivedAt: null,
+        organizationId,
         type: "STITCHING_SERVICE"
       }
     })

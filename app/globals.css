@@ -98,6 +98,12 @@ body {
   margin-top: 4px;
 }
 
+.report-business-line {
+  color: #475569 !important;
+  font-size: 12px;
+  margin-top: 4px !important;
+}
+
 .report-summary {
   display: grid;
   gap: 28px;
@@ -182,6 +188,15 @@ body {
 
 .report-table tbody tr:last-child td {
   border-bottom-color: #cbd5e1;
+}
+
+.report-footer {
+  border-top: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 30px;
+  padding-top: 12px;
+  text-align: center;
 }
 
 @media print {
@@ -279,6 +294,31 @@ body {
     padding-bottom: 12px;
   }
 
+  .receipt-brand {
+    align-items: start;
+    border-bottom: 1px solid #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .receipt-shop-name {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .receipt-brand-mark {
+    border: 1px solid #0f172a;
+    color: #0f172a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 6px 9px;
+    text-transform: uppercase;
+  }
+
   .receipt-label {
     color: #475569;
     font-size: 11px;
@@ -356,6 +396,15 @@ body {
 
   .receipt-list-row + .receipt-list-row {
     border-top: 1px solid #cbd5e1;
+  }
+
+  .receipt-footer {
+    border-top: 1px solid #cbd5e1;
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 18px;
+    padding-top: 10px;
+    text-align: center;
   }
 
   .invoice-print {

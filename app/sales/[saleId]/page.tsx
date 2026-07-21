@@ -16,6 +16,7 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganization } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { addInvoicePayment } from "../actions";
@@ -102,6 +103,8 @@ export default async function SaleDetailPage({
   params: Promise<{ saleId: string }>;
   searchParams?: Promise<{ payment?: string | string[]; print?: string | string[] }>;
 }) {
+  const organization = await getCurrentOrganization();
+  const organizationId = organization.id;
   const { saleId } = await params;
   const query = await searchParams;
   const printValue = Array.isArray(query?.print) ? query?.print[0] : query?.print;
@@ -130,7 +133,8 @@ export default async function SaleDetailPage({
       }
     },
     where: {
-      id: saleId
+      id: saleId,
+      organizationId
     }
   });
 
@@ -146,6 +150,17 @@ export default async function SaleDetailPage({
   return (
     <AppShell>
       <section className="print-receipt hidden">
+        <div className="receipt-brand">
+          <div>
+            <p className="receipt-shop-name">{organization.name}</p>
+            {[organization.address, organization.city].filter(Boolean).length ? (
+              <p>{[organization.address, organization.city].filter(Boolean).join(", ")}</p>
+            ) : null}
+            {organization.phone ? <p>{organization.phone}</p> : null}
+          </div>
+          <div className="receipt-brand-mark">Invoice</div>
+        </div>
+
         <div className="receipt-header">
           <div>
             <p className="receipt-label">Invoice</p>
@@ -280,6 +295,10 @@ export default async function SaleDetailPage({
             </div>
           </section>
         ) : null}
+
+        <footer className="receipt-footer">
+          {organization.invoiceFooter || "Thank you for your business."}
+        </footer>
       </section>
 
       <div className="no-print space-y-5 sm:space-y-6">

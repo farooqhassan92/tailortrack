@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 function readString(formData: FormData, key: string) {
@@ -47,6 +48,7 @@ function normalizeRateKey(value: string) {
 }
 
 export async function saveStitchingRate(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
   const garmentType = readString(formData, "garmentType");
   let tailorRate: Prisma.Decimal;
@@ -64,14 +66,15 @@ export async function saveStitchingRate(formData: FormData) {
   }
 
   if (productId) {
-    await prisma.product.update({
+    await prisma.product.updateMany({
       data: {
         costPrice: tailorRate,
         name: garmentType,
         sellingPrice: customerCharge
       },
       where: {
-        id: productId
+        id: productId,
+        organizationId
       }
     });
   } else {
@@ -81,6 +84,7 @@ export async function saveStitchingRate(formData: FormData) {
           equals: garmentType,
           mode: "insensitive"
         },
+        organizationId,
         type: "STITCHING_SERVICE"
       }
     });
@@ -102,6 +106,7 @@ export async function saveStitchingRate(formData: FormData) {
           category: "STITCHING_RATES",
           costPrice: tailorRate,
           name: garmentType,
+          organizationId,
           quantityOnHand: new Prisma.Decimal(0),
           sellingPrice: customerCharge,
           type: "STITCHING_SERVICE",
@@ -117,6 +122,7 @@ export async function saveStitchingRate(formData: FormData) {
 }
 
 export async function createSalaryBatch(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const orderIds = formData
     .getAll("orderId")
     .filter((value): value is string => typeof value === "string" && Boolean(value));
@@ -140,6 +146,7 @@ export async function createSalaryBatch(formData: FormData) {
         id: {
           in: orderIds
         },
+        organizationId,
         salaryLines: {
           none: {
             batch: {
@@ -158,6 +165,7 @@ export async function createSalaryBatch(formData: FormData) {
   const stitchingRates = await prisma.product.findMany({
     where: {
       archivedAt: null,
+      organizationId,
       type: "STITCHING_SERVICE"
     }
   });
@@ -194,6 +202,7 @@ export async function createSalaryBatch(formData: FormData) {
   await prisma.tailorSalaryBatch.create({
     data: {
       notes,
+      organizationId,
       periodEnd,
       periodStart,
       totalAmount,
@@ -214,6 +223,7 @@ export async function createSalaryBatch(formData: FormData) {
 }
 
 export async function updateSalaryBatch(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const batchId = readString(formData, "batchId");
   const tailorId = readString(formData, "tailorId");
   const periodStartValue = readString(formData, "periodStart");
@@ -224,12 +234,13 @@ export async function updateSalaryBatch(formData: FormData) {
     redirect(paidSalariesPath("batch-missing"));
   }
 
-  const existingBatch = await prisma.tailorSalaryBatch.findUnique({
+  const existingBatch = await prisma.tailorSalaryBatch.findFirst({
     select: {
       voidedAt: true
     },
     where: {
-      id: batchId
+      id: batchId,
+      organizationId
     }
   });
 
@@ -243,14 +254,15 @@ export async function updateSalaryBatch(formData: FormData) {
 
   const now = new Date();
 
-  await prisma.tailorSalaryBatch.update({
+  await prisma.tailorSalaryBatch.updateMany({
     data: {
       notes,
       periodEnd: parseDate(periodEndValue, now),
       periodStart: parseDate(periodStartValue, now)
     },
     where: {
-      id: batchId
+      id: batchId,
+      organizationId
     }
   });
 
@@ -259,6 +271,7 @@ export async function updateSalaryBatch(formData: FormData) {
 }
 
 export async function voidSalaryBatch(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const batchId = readString(formData, "batchId");
   const tailorId = readString(formData, "tailorId");
   const voidReason = readString(formData, "voidReason");
@@ -271,12 +284,13 @@ export async function voidSalaryBatch(formData: FormData) {
     redirect(paidSalariesPath("void-reason-missing", batchId, tailorId));
   }
 
-  const existingBatch = await prisma.tailorSalaryBatch.findUnique({
+  const existingBatch = await prisma.tailorSalaryBatch.findFirst({
     select: {
       voidedAt: true
     },
     where: {
-      id: batchId
+      id: batchId,
+      organizationId
     }
   });
 
@@ -288,13 +302,14 @@ export async function voidSalaryBatch(formData: FormData) {
     redirect(paidSalariesPath("batch-voided", batchId, tailorId));
   }
 
-  await prisma.tailorSalaryBatch.update({
+  await prisma.tailorSalaryBatch.updateMany({
     data: {
       voidReason,
       voidedAt: new Date()
     },
     where: {
-      id: batchId
+      id: batchId,
+      organizationId
     }
   });
 

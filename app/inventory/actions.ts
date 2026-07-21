@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 const productTypePrefixes = {
@@ -92,6 +93,7 @@ function isDuplicateSkuError(error: unknown) {
 }
 
 export async function createInventoryItem(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const category = readString(formData, "category") as keyof typeof categoryDefaults;
   const selectedCategory = categoryDefaults[category] ? category : "UNSTITCHED_ROLLS";
   const categoryConfig = categoryDefaults[selectedCategory];
@@ -122,8 +124,9 @@ export async function createInventoryItem(formData: FormData) {
   }
 
   if (providedSku) {
-    const existingProduct = await prisma.product.findUnique({
+    const existingProduct = await prisma.product.findFirst({
       where: {
+        organizationId,
         sku: providedSku
       }
     });
@@ -156,6 +159,7 @@ export async function createInventoryItem(formData: FormData) {
         prisma.inventoryMovement.create({
           data: {
             note: "Restocked from add stock item",
+            organizationId,
             productId: existingProduct.id,
             quantity,
             type: "STOCK_IN"
@@ -177,6 +181,7 @@ export async function createInventoryItem(formData: FormData) {
           costPrice,
           fabricType,
           name,
+          organizationId,
           quantityOnHand: quantity,
           sellingPrice,
           size,
@@ -190,6 +195,7 @@ export async function createInventoryItem(formData: FormData) {
         await tx.inventoryMovement.create({
           data: {
             note: "Opening stock",
+            organizationId,
             productId: product.id,
             quantity,
             type: "STOCK_IN"
@@ -210,6 +216,7 @@ export async function createInventoryItem(formData: FormData) {
 }
 
 export async function recordInventoryMovement(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
   const type = readString(formData, "type") as keyof typeof movementLabels;
   const note = readString(formData, "note") || null;
@@ -223,6 +230,20 @@ export async function recordInventoryMovement(formData: FormData) {
   }
 
   if (!productId || !movementLabels[type] || quantity.lte(0)) {
+    redirect(inventoryStatusPath("movement-missing"));
+  }
+
+  const product = await prisma.product.findFirst({
+    select: {
+      id: true
+    },
+    where: {
+      id: productId,
+      organizationId
+    }
+  });
+
+  if (!product) {
     redirect(inventoryStatusPath("movement-missing"));
   }
 
@@ -243,6 +264,7 @@ export async function recordInventoryMovement(formData: FormData) {
     prisma.inventoryMovement.create({
       data: {
         note,
+        organizationId,
         productId,
         quantity: quantityDelta,
         type
@@ -255,6 +277,7 @@ export async function recordInventoryMovement(formData: FormData) {
 }
 
 export async function updateInventoryItem(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
   const category = readString(formData, "category") as keyof typeof categoryDefaults;
   const selectedCategory = categoryDefaults[category] ? category : "UNSTITCHED_ROLLS";
@@ -282,7 +305,7 @@ export async function updateInventoryItem(formData: FormData) {
   }
 
   try {
-    await prisma.product.update({
+    await prisma.product.updateMany({
       data: {
         category: selectedCategory,
         color,
@@ -296,7 +319,8 @@ export async function updateInventoryItem(formData: FormData) {
         unit
       },
       where: {
-        id: productId
+        id: productId,
+        organizationId
       }
     });
   } catch (error) {
@@ -312,9 +336,24 @@ export async function updateInventoryItem(formData: FormData) {
 }
 
 export async function deleteInventoryItem(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
 
   if (!productId) {
+    redirect(inventoryStatusPath("delete-missing"));
+  }
+
+  const product = await prisma.product.findFirst({
+    select: {
+      id: true
+    },
+    where: {
+      id: productId,
+      organizationId
+    }
+  });
+
+  if (!product) {
     redirect(inventoryStatusPath("delete-missing"));
   }
 
@@ -358,18 +397,20 @@ export async function deleteInventoryItem(formData: FormData) {
 }
 
 export async function restoreInventoryItem(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const productId = readString(formData, "productId");
 
   if (!productId) {
     redirect(inventoryStatusPath("restore-missing"));
   }
 
-  await prisma.product.update({
+  await prisma.product.updateMany({
     data: {
       archivedAt: null
     },
     where: {
-      id: productId
+      id: productId,
+      organizationId
     }
   });
 

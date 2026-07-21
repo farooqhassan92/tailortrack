@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 function readString(formData: FormData, key: string) {
@@ -16,6 +17,7 @@ function tailorsPath(status: string): Route {
 }
 
 export async function createTailor(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const name = readString(formData, "name");
   const phone = readString(formData, "phone") || null;
 
@@ -26,6 +28,7 @@ export async function createTailor(formData: FormData) {
   await prisma.tailor.create({
     data: {
       name,
+      organizationId,
       phone
     }
   });
@@ -36,6 +39,7 @@ export async function createTailor(formData: FormData) {
 }
 
 export async function updateTailor(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const tailorId = readString(formData, "tailorId");
   const name = readString(formData, "name");
   const phone = readString(formData, "phone") || null;
@@ -44,13 +48,14 @@ export async function updateTailor(formData: FormData) {
     redirect(tailorsPath("missing"));
   }
 
-  await prisma.tailor.update({
+  await prisma.tailor.updateMany({
     data: {
       name,
       phone
     },
     where: {
-      id: tailorId
+      id: tailorId,
+      organizationId
     }
   });
 
@@ -60,6 +65,7 @@ export async function updateTailor(formData: FormData) {
 }
 
 export async function toggleTailorActive(formData: FormData) {
+  const organizationId = await getCurrentOrganizationId();
   const tailorId = readString(formData, "tailorId");
   const active = readString(formData, "active") === "true";
 
@@ -67,12 +73,13 @@ export async function toggleTailorActive(formData: FormData) {
     redirect(tailorsPath("missing"));
   }
 
-  await prisma.tailor.update({
+  await prisma.tailor.updateMany({
     data: {
       active
     },
     where: {
-      id: tailorId
+      id: tailorId,
+      organizationId
     }
   });
 

@@ -16,6 +16,7 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { createTailor, toggleTailorActive, updateTailor } from "./actions";
@@ -72,6 +73,7 @@ export default async function TailorsPage({
 }: {
   searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
@@ -120,20 +122,23 @@ export default async function TailorsPage({
       ],
       where: query
         ? {
+            organizationId,
             OR: [
               { name: { contains: query, mode: "insensitive" as const } },
               { phone: { contains: query, mode: "insensitive" as const } }
             ]
           }
-        : {}
+        : { organizationId }
     }),
     prisma.tailor.count({
       where: {
+        organizationId,
         active: true
       }
     }),
     prisma.tailor.count({
       where: {
+        organizationId,
         active: false
       }
     }),
@@ -142,6 +147,7 @@ export default async function TailorsPage({
         tailorId: {
           not: null
         },
+        organizationId,
         status: {
           in: ["PENDING", "CUTTING", "STITCHING", "READY"]
         }
@@ -152,6 +158,7 @@ export default async function TailorsPage({
         tailorId: {
           not: null
         },
+        organizationId,
         status: "DELIVERED"
       }
     }),
@@ -161,6 +168,7 @@ export default async function TailorsPage({
       },
       where: {
         archivedAt: null,
+        organizationId,
         type: "STITCHING_SERVICE"
       }
     })

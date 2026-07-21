@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentOrganization } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { StatementPrintButton } from "./statement-print-button";
@@ -131,6 +132,8 @@ export default async function CustomerDetailPage({
   params: Promise<{ customerId: string }>;
   searchParams?: Promise<{ tab?: string | string[] }>;
 }) {
+  const organization = await getCurrentOrganization();
+  const organizationId = organization.id;
   const [{ customerId }, queryParams] = await Promise.all([params, searchParams]);
   const selectedTab = getSelectedTab(queryParams?.tab);
   const customer = await prisma.customer.findUnique({
@@ -174,7 +177,8 @@ export default async function CustomerDetailPage({
       }
     },
     where: {
-      id: customerId
+      id: customerId,
+      organizationId
     }
   });
 
@@ -211,6 +215,17 @@ export default async function CustomerDetailPage({
   return (
     <AppShell>
       <section className="print-statement hidden">
+        <div className="receipt-brand">
+          <div>
+            <p className="receipt-shop-name">{organization.name}</p>
+            {[organization.address, organization.city].filter(Boolean).length ? (
+              <p>{[organization.address, organization.city].filter(Boolean).join(", ")}</p>
+            ) : null}
+            {organization.phone ? <p>{organization.phone}</p> : null}
+          </div>
+          <div className="receipt-brand-mark">Statement</div>
+        </div>
+
         <div className="receipt-header">
           <div>
             <p className="receipt-label">Customer Statement</p>
@@ -268,6 +283,10 @@ export default async function CustomerDetailPage({
             </tbody>
           </table>
         </section>
+
+        <footer className="receipt-footer">
+          {organization.invoiceFooter || "Thank you for your business."}
+        </footer>
       </section>
 
       <div className="no-print space-y-5 sm:space-y-6">

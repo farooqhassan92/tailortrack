@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 import {
   Archive,
@@ -84,6 +85,7 @@ export default async function CustomersPage({
 }: {
   searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const query = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
@@ -118,6 +120,7 @@ export default async function CustomersPage({
       },
       where: {
         archivedAt: null,
+        organizationId,
         ...(normalizedQuery
           ? {
               OR: [
@@ -131,7 +134,8 @@ export default async function CustomersPage({
     }),
     prisma.customer.count({
       where: {
-        archivedAt: null
+        archivedAt: null,
+        organizationId
       }
     }),
     prisma.sale.aggregate({
@@ -142,7 +146,8 @@ export default async function CustomersPage({
       where: {
         customerId: {
           not: null
-        }
+        },
+        organizationId
       }
     })
   ]);

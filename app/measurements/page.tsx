@@ -10,6 +10,7 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { createMeasurement, updateMeasurement } from "./actions";
@@ -85,6 +86,7 @@ export default async function MeasurementsPage({
 }: {
   searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
@@ -112,6 +114,7 @@ export default async function MeasurementsPage({
       take: 40,
       where: {
         archivedAt: null,
+        organizationId,
         ...(query
           ? {
               OR: [
@@ -122,10 +125,15 @@ export default async function MeasurementsPage({
           : {})
       }
     }),
-    prisma.customerMeasurement.count(),
+    prisma.customerMeasurement.count({
+      where: {
+        organizationId
+      }
+    }),
     prisma.customer.count({
       where: {
-        archivedAt: null
+        archivedAt: null,
+        organizationId
       }
     })
   ]);

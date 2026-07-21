@@ -24,6 +24,7 @@ import {
   periodOptions,
   type PeriodValue
 } from "@/lib/dashboard-report";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { createExpense, deleteExpense, updateExpense } from "./actions";
@@ -110,6 +111,7 @@ export default async function ExpensesPage({
     status?: string | string[];
   }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedCategory = getCategory(params?.category);
   const selectedPeriod = getSelectedPeriod(params?.period);
@@ -120,6 +122,7 @@ export default async function ExpensesPage({
   const now = new Date();
   const startDate = getPeriodStart(selectedPeriod, now);
   const periodWhere = {
+    organizationId,
     spentAt: {
       gte: startDate,
       lte: now

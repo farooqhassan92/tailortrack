@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,7 @@ export default async function InvoicesPage({
 }: {
   searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedStatus = getStatus(params?.status);
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
@@ -93,6 +95,7 @@ export default async function InvoicesPage({
       }
     : {};
   const where: Prisma.SaleWhereInput = {
+    organizationId,
     ...statusWhere,
     ...queryWhere
   };
@@ -122,6 +125,7 @@ export default async function InvoicesPage({
     prisma.sale.count({
       where: {
         ...queryWhere,
+        organizationId,
         paymentStatus: {
           in: ["UNPAID", "PARTIAL"]
         }

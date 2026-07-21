@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 import {
   Banknote,
@@ -89,6 +90,7 @@ export default async function SalesPage({
     status?: string | string[];
   }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
   const customerQueryValue = Array.isArray(params?.customerQuery)
@@ -107,6 +109,7 @@ export default async function SalesPage({
       },
       where: {
         archivedAt: null,
+        organizationId,
         type: {
           not: "STITCHING_SERVICE"
         }
@@ -123,7 +126,8 @@ export default async function SalesPage({
           },
           where: {
             archivedAt: null,
-            id: selectedCustomerId
+            id: selectedCustomerId,
+            organizationId
           }
         })
       : null,
@@ -135,6 +139,7 @@ export default async function SalesPage({
           take: 8,
           where: {
             archivedAt: null,
+            organizationId,
             OR: [
               { name: { contains: customerQuery, mode: "insensitive" as const } },
               { phone: { contains: customerQuery, mode: "insensitive" as const } }
@@ -150,12 +155,18 @@ export default async function SalesPage({
       orderBy: {
         createdAt: "desc"
       },
-      take: 8
+      take: 8,
+      where: {
+        organizationId
+      }
     }),
     prisma.sale.aggregate({
       _sum: {
         paidAmount: true,
         total: true
+      },
+      where: {
+        organizationId
       }
     })
   ]);

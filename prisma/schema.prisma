@@ -53,20 +53,64 @@ enum ExpenseCategory {
   MISC
 }
 
+enum OrganizationRole {
+  ADMIN
+}
+
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String               @id @default(cuid())
+  name                    String
+  email                   String               @unique
+  organizationMemberships OrganizationMember[]
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+}
+
+model Organization {
+  id                 String                @id @default(cuid())
+  name               String
+  slug               String                @unique
+  phone              String?
+  address            String?               @db.Text
+  city               String?
+  invoiceFooter      String?               @db.Text
+  profileCompletedAt DateTime?
+  members            OrganizationMember[]
+  customers          Customer[]
+  measurements       CustomerMeasurement[]
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  sales              Sale[]
+  tailors            Tailor[]
+  stitchingOrders    StitchingOrder[]
+  salaryBatches      TailorSalaryBatch[]
+  expenses           Expense[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(ADMIN)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
 }
 
 model Customer {
+  organizationId  String
   id              String                @id @default(cuid())
   name            String
-  phone           String                @unique
+  phone           String
   address         String?
   notes           String?               @db.Text
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   measurements    CustomerMeasurement[]
   sales           Sale[]
   stitchingOrders StitchingOrder[]
@@ -74,38 +118,44 @@ model Customer {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
+  @@unique([organizationId, phone])
   @@index([archivedAt])
   @@index([name])
+  @@index([organizationId])
 }
 
 model CustomerMeasurement {
-  id             String   @id @default(cuid())
-  customerId     String
-  label          String   @default("Default")
-  shirtLength    Decimal? @db.Decimal(8, 2)
-  shoulder       Decimal? @db.Decimal(8, 2)
-  chest          Decimal? @db.Decimal(8, 2)
-  waist          Decimal? @db.Decimal(8, 2)
-  sleeve         Decimal? @db.Decimal(8, 2)
-  collar         Decimal? @db.Decimal(8, 2)
-  trouserLength  Decimal? @db.Decimal(8, 2)
-  trouserWaist   Decimal? @db.Decimal(8, 2)
-  inseam         Decimal? @db.Decimal(8, 2)
-  styleNotes     String?  @db.Text
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId  String
+  id              String           @id @default(cuid())
+  customerId      String
+  label           String           @default("Default")
+  shirtLength     Decimal?         @db.Decimal(8, 2)
+  shoulder        Decimal?         @db.Decimal(8, 2)
+  chest           Decimal?         @db.Decimal(8, 2)
+  waist           Decimal?         @db.Decimal(8, 2)
+  sleeve          Decimal?         @db.Decimal(8, 2)
+  collar          Decimal?         @db.Decimal(8, 2)
+  trouserLength   Decimal?         @db.Decimal(8, 2)
+  trouserWaist    Decimal?         @db.Decimal(8, 2)
+  inseam          Decimal?         @db.Decimal(8, 2)
+  styleNotes      String?          @db.Text
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   stitchingOrders StitchingOrder[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([customerId])
+  @@index([organizationId])
 }
 
 model Product {
+  organizationId     String
   id                 String              @id @default(cuid())
   name               String
   type               ProductType
   category           String              @default("UNSTITCHED_ROLLS")
-  sku                String?             @unique
+  sku                String?
   color              String?
   size               String?
   fabricType         String?
@@ -113,6 +163,7 @@ model Product {
   quantityOnHand     Decimal             @default(0) @db.Decimal(12, 2)
   costPrice          Decimal             @default(0) @db.Decimal(12, 2)
   sellingPrice       Decimal             @default(0) @db.Decimal(12, 2)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
   saleItems          SaleItem[]
   tailorRates        TailorRate[]
@@ -120,71 +171,83 @@ model Product {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  @@unique([organizationId, sku])
   @@index([type])
   @@index([category])
   @@index([archivedAt])
   @@index([name])
+  @@index([organizationId])
 }
 
 model InventoryMovement {
-  id        String                @id @default(cuid())
-  productId String
-  type      InventoryMovementType
-  quantity  Decimal               @db.Decimal(12, 2)
-  note      String?
-  product   Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime              @default(now())
+  organizationId String
+  id             String                @id @default(cuid())
+  productId      String
+  type           InventoryMovementType
+  quantity       Decimal               @db.Decimal(12, 2)
+  note           String?
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt      DateTime              @default(now())
 
   @@index([productId])
   @@index([type])
+  @@index([organizationId])
 }
 
 model Sale {
-  id            String        @id @default(cuid())
-  customerId    String?
-  invoiceNumber String        @unique
-  subtotal      Decimal       @default(0) @db.Decimal(12, 2)
-  discount      Decimal       @default(0) @db.Decimal(12, 2)
-  total         Decimal       @default(0) @db.Decimal(12, 2)
-  paidAmount    Decimal       @default(0) @db.Decimal(12, 2)
-  paymentStatus PaymentStatus @default(UNPAID)
-  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items         SaleItem[]
-  payments      Payment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  organizationId String
+  id             String        @id @default(cuid())
+  customerId     String?
+  invoiceNumber  String        @unique
+  subtotal       Decimal       @default(0) @db.Decimal(12, 2)
+  discount       Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @default(0) @db.Decimal(12, 2)
+  paidAmount     Decimal       @default(0) @db.Decimal(12, 2)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items          SaleItem[]
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([customerId])
   @@index([createdAt])
+  @@index([organizationId])
 }
 
 model SaleItem {
-  id                String          @id @default(cuid())
-  saleId            String
-  productId         String?
-  stitchingOrderId  String?
-  description       String
-  quantity          Decimal         @db.Decimal(12, 2)
-  unitPrice         Decimal         @db.Decimal(12, 2)
-  total             Decimal         @db.Decimal(12, 2)
-  sale              Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product           Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  stitchingOrder    StitchingOrder? @relation(fields: [stitchingOrderId], references: [id], onDelete: SetNull)
+  id               String          @id @default(cuid())
+  saleId           String
+  productId        String?
+  stitchingOrderId String?
+  description      String
+  quantity         Decimal         @db.Decimal(12, 2)
+  unitPrice        Decimal         @db.Decimal(12, 2)
+  total            Decimal         @db.Decimal(12, 2)
+  sale             Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  stitchingOrder   StitchingOrder? @relation(fields: [stitchingOrderId], references: [id], onDelete: SetNull)
 
   @@index([saleId])
   @@index([productId])
 }
 
 model Tailor {
-  id              String               @id @default(cuid())
+  organizationId  String
+  id              String             @id @default(cuid())
   name            String
   phone           String?
-  active          Boolean              @default(true)
+  active          Boolean            @default(true)
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   rates           TailorRate[]
   stitchingOrders StitchingOrder[]
   salaryLines     TailorSalaryLine[]
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([organizationId])
 }
 
 model TailorRate {
@@ -202,59 +265,65 @@ model TailorRate {
 }
 
 model StitchingOrder {
-  id              String             @id @default(cuid())
+  organizationId  String
+  id              String               @id @default(cuid())
   customerId      String
   tailorId        String?
   measurementId   String?
-  orderNumber     String             @unique
+  orderNumber     String               @unique
   garmentType     String
   fabricDetails   String?
-  styleNotes      String?            @db.Text
+  styleNotes      String?              @db.Text
   dueDate         DateTime?
-  status          StitchingStatus    @default(PENDING)
-  stitchingCharge Decimal            @default(0) @db.Decimal(12, 2)
-  tailorRate      Decimal            @default(0) @db.Decimal(12, 2)
+  status          StitchingStatus      @default(PENDING)
+  stitchingCharge Decimal              @default(0) @db.Decimal(12, 2)
+  tailorRate      Decimal              @default(0) @db.Decimal(12, 2)
   completedAt     DateTime?
   deliveredAt     DateTime?
-  customer        Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  tailor          Tailor?            @relation(fields: [tailorId], references: [id], onDelete: SetNull)
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer        Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tailor          Tailor?              @relation(fields: [tailorId], references: [id], onDelete: SetNull)
   measurement     CustomerMeasurement? @relation(fields: [measurementId], references: [id], onDelete: SetNull)
   saleItems       SaleItem[]
   salaryLines     TailorSalaryLine[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@index([customerId])
   @@index([tailorId])
   @@index([status])
   @@index([dueDate])
+  @@index([organizationId])
 }
 
 model TailorSalaryBatch {
-  id          String             @id @default(cuid())
-  periodStart DateTime
-  periodEnd   DateTime
-  totalAmount Decimal            @default(0) @db.Decimal(12, 2)
-  notes       String?            @db.Text
-  voidedAt    DateTime?
-  voidReason  String?            @db.Text
-  lines       TailorSalaryLine[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  organizationId String
+  id             String             @id @default(cuid())
+  periodStart    DateTime
+  periodEnd      DateTime
+  totalAmount    Decimal            @default(0) @db.Decimal(12, 2)
+  notes          String?            @db.Text
+  voidedAt       DateTime?
+  voidReason     String?            @db.Text
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lines          TailorSalaryLine[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([voidedAt])
+  @@index([organizationId])
 }
 
 model TailorSalaryLine {
-  id               String             @id @default(cuid())
+  id               String            @id @default(cuid())
   batchId          String
   tailorId         String
   stitchingOrderId String
-  amount           Decimal            @db.Decimal(12, 2)
-  batch            TailorSalaryBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  tailor           Tailor             @relation(fields: [tailorId], references: [id], onDelete: Cascade)
-  stitchingOrder   StitchingOrder     @relation(fields: [stitchingOrderId], references: [id], onDelete: Cascade)
-  createdAt        DateTime           @default(now())
+  amount           Decimal           @db.Decimal(12, 2)
+  batch            TailorSalaryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  tailor           Tailor            @relation(fields: [tailorId], references: [id], onDelete: Cascade)
+  stitchingOrder   StitchingOrder    @relation(fields: [stitchingOrderId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
 
   @@unique([batchId, stitchingOrderId])
   @@index([tailorId])
@@ -273,16 +342,18 @@ model Payment {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  category    ExpenseCategory
-  description String
-  amount      Decimal         @db.Decimal(12, 2)
-  spentAt     DateTime        @default(now())
-  note        String?         @db.Text
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  organizationId String
+  id             String          @id @default(cuid())
+  category       ExpenseCategory
+  description    String
+  amount         Decimal         @db.Decimal(12, 2)
+  spentAt        DateTime        @default(now())
+  note           String?         @db.Text
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([category])
   @@index([spentAt])
+  @@index([organizationId])
 }
-

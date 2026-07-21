@@ -15,6 +15,7 @@ import {
 
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
+import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
 import { updateStitchingOrder } from "../stitching-orders/actions";
@@ -211,6 +212,7 @@ export default async function ProductionPage({
 }: {
   searchParams?: Promise<{ period?: string | string[]; statusMessage?: string | string[] }>;
 }) {
+  const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const statusValue = Array.isArray(params?.statusMessage)
     ? params?.statusMessage[0]
@@ -251,6 +253,7 @@ export default async function ProductionPage({
       ],
       take: 80,
       where: {
+        organizationId,
         OR: [
           {
             status: {
@@ -271,6 +274,7 @@ export default async function ProductionPage({
       include: {
         stitchingOrders: {
           where: {
+            organizationId,
             status: {
               in: activeStatuses
             }
@@ -284,7 +288,10 @@ export default async function ProductionPage({
         {
           name: "asc"
         }
-      ]
+      ],
+      where: {
+        organizationId
+      }
     }),
   ]);
 
