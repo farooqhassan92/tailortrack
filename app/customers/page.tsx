@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { prisma } from "@/lib/prisma";
@@ -5,6 +7,7 @@ import {
   Archive,
   Banknote,
   ClipboardList,
+  Eye,
   MapPin,
   Pencil,
   Phone,
@@ -294,17 +297,27 @@ export default async function CustomersPage({
                           </p>
                         </div>
 
-                        <form action={archiveOrDeleteCustomer} className="flex lg:justify-end">
-                          <input name="customerId" type="hidden" value={customer.id} />
-                          <button
-                            className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100"
-                            title="Archive or delete customer"
-                            type="submit"
+                        <div className="flex gap-2 lg:justify-end">
+                          <Link
+                            className="flex size-9 items-center justify-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800"
+                            href={`/customers/${customer.id}` as Route}
+                            title="View customer details"
                           >
-                            <Archive aria-hidden="true" className="size-4" />
-                            <span className="sr-only">Archive or delete {customer.name}</span>
-                          </button>
-                        </form>
+                            <Eye aria-hidden="true" className="size-4" />
+                            <span className="sr-only">View details for {customer.name}</span>
+                          </Link>
+                          <form action={archiveOrDeleteCustomer}>
+                            <input name="customerId" type="hidden" value={customer.id} />
+                            <button
+                              className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                              title="Archive or delete customer"
+                              type="submit"
+                            >
+                              <Archive aria-hidden="true" className="size-4" />
+                              <span className="sr-only">Archive or delete {customer.name}</span>
+                            </button>
+                          </form>
+                        </div>
                       </div>
 
                       <details className="group mt-4">

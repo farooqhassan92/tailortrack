@@ -106,6 +106,12 @@ export async function getDashboardReport(period: PeriodValue) {
       lte: now
     }
   };
+  const expensePeriodWhere = {
+    spentAt: {
+      gte: startDate,
+      lte: now
+    }
+  };
 
   const [
     saleTotals,
@@ -118,7 +124,13 @@ export async function getDashboardReport(period: PeriodValue) {
     stitchingOrders,
     lowStockProducts,
     activeProductCount,
-    activeCustomerCount
+    activeCustomerCount,
+    expenseTotals,
+    recentExpenses,
+    salaryPaidTotals,
+    periodSaleItems,
+    unpaidTailorOrders,
+    stitchingRates
   ] = await Promise.all([
     prisma.sale.aggregate({
       _sum: {
@@ -220,6 +232,67 @@ export async function getDashboardReport(period: PeriodValue) {
       where: {
         archivedAt: null
       }
+    }),
+    prisma.expense.aggregate({
+      _sum: {
+        amount: true
+      },
+      where: expensePeriodWhere
+    }),
+    prisma.expense.findMany({
+      orderBy: {
+        spentAt: "desc"
+      },
+      take: 8,
+      where: expensePeriodWhere
+    }),
+    prisma.tailorSalaryBatch.aggregate({
+      _sum: {
+        totalAmount: true
+      },
+      where: {
+        ...periodWhere,
+        voidedAt: null
+      }
+    }),
+    prisma.saleItem.findMany({
+      include: {
+        product: true,
+        sale: true
+      },
+      where: {
+        sale: periodWhere
+      }
+    }),
+    prisma.stitchingOrder.findMany({
+      select: {
+        garmentType: true
+      },
+      where: {
+        salaryLines: {
+          none: {
+            batch: {
+              voidedAt: null
+            }
+          }
+        },
+        status: {
+          in: ["READY", "DELIVERED"]
+        },
+        tailorId: {
+          not: null
+        }
+      }
+    }),
+    prisma.product.findMany({
+      select: {
+        costPrice: true,
+        name: true
+      },
+      where: {
+        archivedAt: null,
+        type: "STITCHING_SERVICE"
+      }
     })
   ]);
 
@@ -227,6 +300,24 @@ export async function getDashboardReport(period: PeriodValue) {
   const paidSales = asNumber(saleTotals._sum.paidAmount);
   const unpaidBalance = totalSales - paidSales;
   const averageSale = saleCount ? totalSales / saleCount : 0;
+  const expenseTotal = asNumber(expenseTotals._sum.amount);
+  const salaryPaidTotal = asNumber(salaryPaidTotals._sum.totalAmount);
+  const inventoryCost = periodSaleItems.reduce((sum, item) => {
+    if (!item.product) {
+      return sum;
+    }
+
+    return sum + asNumber(item.product.costPrice) * asNumber(item.quantity);
+  }, 0);
+  const rateByGarmentType = new Map(
+    stitchingRates.map((rate) => [rate.name.trim().toLowerCase(), rate.costPrice])
+  );
+  const pendingTailorPayable = unpaidTailorOrders.reduce((sum, order) => {
+    const rate = rateByGarmentType.get(order.garmentType.trim().toLowerCase());
+
+    return sum + asNumber(rate);
+  }, 0);
+  const netProfit = paidSales - inventoryCost - salaryPaidTotal - expenseTotal;
 
   return {
     activeCustomerCount,
@@ -234,14 +325,20 @@ export async function getDashboardReport(period: PeriodValue) {
     averageSale,
     deliveredOrders,
     endDate: now,
+    expenseTotal,
+    inventoryCost,
     lowStockProducts,
+    netProfit,
     paidSales,
+    pendingTailorPayable,
     pendingStitching,
     period,
+    recentExpenses,
     recentSales,
     readyOrders,
     saleCount,
     selectedPeriodLabel,
+    salaryPaidTotal,
     startDate,
     stitchingCount,
     stitchingOrders,

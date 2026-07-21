@@ -12,7 +12,8 @@ import {
   Ruler,
   Scissors,
   Shirt,
-  Users
+  Users,
+  WalletCards
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -77,6 +78,12 @@ const navigation = [
     icon: ChartNoAxesCombined,
     label: "Salaries",
     iconTone: "bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100 group-hover:text-indigo-800"
+  },
+  {
+    href: "/expenses",
+    icon: WalletCards,
+    label: "Expenses",
+    iconTone: "bg-rose-50 text-rose-700 group-hover:bg-rose-100 group-hover:text-rose-800"
   }
 ] as const;
 

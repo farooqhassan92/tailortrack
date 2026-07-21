@@ -237,20 +237,23 @@ body {
     padding: 6px 7px;
   }
 
-  .print-receipt {
+  .print-receipt,
+  .print-statement {
     color: #0f172a;
     display: block !important;
     font-size: 12px;
     line-height: 1.45;
   }
 
-  .print-receipt h1 {
+  .print-receipt h1,
+  .print-statement h1 {
     font-size: 24px;
     font-weight: 700;
     margin: 0;
   }
 
-  .print-receipt h2 {
+  .print-receipt h2,
+  .print-statement h2 {
     border-bottom: 1px solid #cbd5e1;
     font-size: 13px;
     font-weight: 700;
@@ -258,11 +261,13 @@ body {
     padding-bottom: 4px;
   }
 
-  .print-receipt p {
+  .print-receipt p,
+  .print-statement p {
     margin: 0;
   }
 
-  .print-receipt section {
+  .print-receipt section,
+  .print-statement section {
     margin-top: 16px;
   }
 

@@ -73,6 +73,22 @@ export default async function DashboardReportPage({
                 <dd>{formatCurrency(report.unpaidBalance)}</dd>
               </div>
               <div>
+                <dt>Inventory cost</dt>
+                <dd>{formatCurrency(report.inventoryCost)}</dd>
+              </div>
+              <div>
+                <dt>Salary paid</dt>
+                <dd>{formatCurrency(report.salaryPaidTotal)}</dd>
+              </div>
+              <div>
+                <dt>Expenses</dt>
+                <dd>{formatCurrency(report.expenseTotal)}</dd>
+              </div>
+              <div>
+                <dt>Net profit</dt>
+                <dd>{formatCurrency(report.netProfit)}</dd>
+              </div>
+              <div>
                 <dt>Average invoice</dt>
                 <dd>{formatCurrency(report.averageSale)}</dd>
               </div>
@@ -97,6 +113,10 @@ export default async function DashboardReportPage({
               <div>
                 <dt>Low stock items</dt>
                 <dd>{report.lowStockProducts.length}</dd>
+              </div>
+              <div>
+                <dt>Pending tailor payable</dt>
+                <dd>{formatCurrency(report.pendingTailorPayable)}</dd>
               </div>
             </dl>
           </div>
@@ -176,6 +196,41 @@ export default async function DashboardReportPage({
               ) : (
                 <tr>
                   <td colSpan={7}>No stitching orders recorded for this period.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="report-section">
+          <div className="report-section-title">
+            <h2>Expense Detail</h2>
+            <p>Shop costs recorded in the selected period.</p>
+          </div>
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Note</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.recentExpenses.length ? (
+                report.recentExpenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <td>{formatDate(expense.spentAt)}</td>
+                    <td>{expense.category.replace("_", " ")}</td>
+                    <td>{expense.description}</td>
+                    <td>{expense.note ?? "-"}</td>
+                    <td>{formatCurrency(expense.amount)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5}>No expenses recorded for this period.</td>
                 </tr>
               )}
             </tbody>

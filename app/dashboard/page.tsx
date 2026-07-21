@@ -10,7 +10,8 @@ import {
   FileText,
   PackageCheck,
   ReceiptText,
-  Scissors
+  Scissors,
+  WalletCards
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -89,6 +90,32 @@ export default async function DashboardPage({
       value: report.deliveredOrders.toString(),
       icon: BadgeCheck,
       accent: "from-lime-500 to-teal-500"
+    }
+  ];
+  const profitStats = [
+    {
+      label: `${report.selectedPeriodLabel} Net Profit`,
+      value: formatCurrency(report.netProfit),
+      icon: Banknote,
+      accent: "from-emerald-600 to-teal-500"
+    },
+    {
+      label: `${report.selectedPeriodLabel} Expenses`,
+      value: formatCurrency(report.expenseTotal),
+      icon: WalletCards,
+      accent: "from-rose-500 to-pink-500"
+    },
+    {
+      label: `${report.selectedPeriodLabel} Inventory Cost`,
+      value: formatCurrency(report.inventoryCost),
+      icon: Boxes,
+      accent: "from-amber-500 to-yellow-500"
+    },
+    {
+      label: `${report.selectedPeriodLabel} Salary Paid`,
+      value: formatCurrency(report.salaryPaidTotal),
+      icon: Scissors,
+      accent: "from-indigo-500 to-violet-500"
     }
   ];
 
@@ -200,6 +227,27 @@ export default async function DashboardPage({
           })}
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {profitStats.map((stat) => {
+            const Icon = stat.icon;
+
+            return (
+              <div
+                className="rounded-3xl border border-white/80 bg-white/80 p-5 shadow-sm backdrop-blur"
+                key={stat.label}
+              >
+                <div
+                  className={`flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br ${stat.accent} text-white shadow-lg shadow-slate-950/10`}
+                >
+                  <Icon aria-hidden="true" className="size-5" />
+                </div>
+                <p className="mt-5 text-sm font-medium text-slate-500">{stat.label}</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">{stat.value}</p>
+              </div>
+            );
+          })}
+        </div>
+
         <section className="overflow-hidden rounded-3xl border border-white/80 bg-white/90 shadow-sm backdrop-blur">
           <div className="border-b border-slate-100 px-5 py-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -224,12 +272,12 @@ export default async function DashboardPage({
                   <p className="font-semibold text-slate-950">{report.activeProductCount}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Average bill</p>
-                  <p className="font-semibold text-slate-950">{formatCurrency(report.averageSale)}</p>
+                  <p className="text-xs text-slate-500">Net profit</p>
+                  <p className="font-semibold text-slate-950">{formatCurrency(report.netProfit)}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Low stock</p>
-                  <p className="font-semibold text-slate-950">{report.lowStockProducts.length}</p>
+                  <p className="text-xs text-slate-500">Expenses</p>
+                  <p className="font-semibold text-slate-950">{formatCurrency(report.expenseTotal)}</p>
                 </div>
               </div>
             </div>
@@ -321,6 +369,37 @@ export default async function DashboardPage({
                     ))
                   ) : (
                     <p className="text-sm text-slate-500">No stitching orders for this period.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <WalletCards aria-hidden="true" className="size-5 text-rose-700" />
+                  <h3 className="font-semibold text-slate-950">Recent expenses</h3>
+                </div>
+                <div className="space-y-2">
+                  {report.recentExpenses.length ? (
+                    report.recentExpenses.slice(0, 4).map((expense) => (
+                      <div
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2"
+                        key={expense.id}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-950">
+                            {expense.description}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {expense.category.replace("_", " ")} - {formatDate(expense.spentAt)}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold text-slate-700">
+                          {formatCurrency(expense.amount)}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">No expenses recorded for this period.</p>
                   )}
                 </div>
               </section>
