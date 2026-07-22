@@ -1,6 +1,7 @@
 import { Building2, MapPin, Phone, Shirt } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getSignedInUserProfile } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -143,12 +144,12 @@ export default async function BusinessProfilePage({
               />
             </label>
 
-            <button
+            <PendingSubmitButton
               className="mt-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/15 transition hover:bg-slate-800"
-              type="submit"
+              pendingText="Creating..."
             >
               Create business profile
-            </button>
+            </PendingSubmitButton>
           </form>
         </div>
       </section>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -338,9 +339,12 @@ export default async function StitchingOrdersPage({
                   placeholder="Search order, customer, phone, tailor"
                 />
               </label>
-              <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+              <PendingSubmitButton
+                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                pendingText="Searching..."
+              >
                 Search
-              </button>
+              </PendingSubmitButton>
             </form>
 
             <div className="flex gap-2 overflow-x-auto">
@@ -518,9 +522,12 @@ export default async function StitchingOrdersPage({
                             placeholder="Fitting notes, fabric notes, delivery instructions"
                           />
                         </label>
-                        <button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2">
+                        <PendingSubmitButton
+                          className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+                          pendingText="Saving..."
+                        >
                           Save order
-                        </button>
+                        </PendingSubmitButton>
                       </form>
                     </details>
                   </article>

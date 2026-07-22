@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
 
@@ -241,9 +242,12 @@ export default async function InvoicesPage({
                   placeholder="Search invoice, customer, or phone"
                 />
               </label>
-              <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+              <PendingSubmitButton
+                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                pendingText="Searching..."
+              >
                 Search
-              </button>
+              </PendingSubmitButton>
             </form>
 
             <div className="flex gap-2 overflow-x-auto">

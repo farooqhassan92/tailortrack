@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -293,9 +294,12 @@ export default async function SalesPage({
                   name="customerQuery"
                   placeholder="Name or phone"
                 />
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Searching..."
+                >
                   Search customer
-                </button>
+                </PendingSubmitButton>
               </form>
 
               <div className="mt-4 space-y-2">

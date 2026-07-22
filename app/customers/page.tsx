@@ -268,9 +268,12 @@ export default async function CustomersPage({
                     placeholder="Search name, phone, or address"
                   />
                 </label>
-                <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Searching..."
+                >
                   Search
-                </button>
+                </PendingSubmitButton>
               </form>
             </div>
 
@@ -341,14 +344,15 @@ export default async function CustomersPage({
                           </Link>
                           <form action={archiveOrDeleteCustomer}>
                             <input name="customerId" type="hidden" value={customer.id} />
-                            <button
-                              className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                            <PendingSubmitButton
+                              className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              pendingText={`Archiving ${customer.name}`}
+                              spinnerOnly
                               title="Archive or delete customer"
-                              type="submit"
                             >
                               <Archive aria-hidden="true" className="size-4" />
                               <span className="sr-only">Archive or delete {customer.name}</span>
-                            </button>
+                            </PendingSubmitButton>
                           </form>
                         </div>
                       </div>

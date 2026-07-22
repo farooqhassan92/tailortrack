@@ -7,6 +7,7 @@ import {
   ClipboardList,
   CreditCard,
   LayoutDashboard,
+  Loader2,
   Menu,
   PackageCheck,
   ReceiptText,
@@ -18,7 +19,8 @@ import {
   WalletCards
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GlobalSearch } from "@/components/search/global-search";
@@ -109,18 +111,116 @@ export function AppShellClient({
   children
 }: {
   businessProfile: BusinessProfile;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isNavigating, setIsNavigating] = useState(false);
   const businessMeta = [businessProfile.city, businessProfile.phone].filter(Boolean).join(" | ");
+  const routeKey = `${pathname}?${searchParams.toString()}`;
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setIsNavigating(false), 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [routeKey]);
+
+  useEffect(() => {
+    if (!isNavigating) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setIsNavigating(false), 8000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isNavigating]);
+
+  function showRouteLoader(href: string, event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0 ||
+      href === pathname
+    ) {
+      return;
+    }
+
+    setIsNavigating(true);
+  }
+
+  function showSubmitLoader(event: FormEvent<HTMLElement>) {
+    const form = event.target instanceof HTMLFormElement ? event.target : null;
+
+    if (!form || form.target === "_blank") {
+      return;
+    }
+
+    setIsNavigating(true);
+  }
+
+  function showInternalLinkLoader(event: MouseEvent<HTMLElement>) {
+    if (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+
+    if (!(target instanceof HTMLAnchorElement) || target.target === "_blank" || target.hasAttribute("download")) {
+      return;
+    }
+
+    const nextUrl = new URL(target.href, window.location.href);
+
+    if (
+      nextUrl.origin !== window.location.origin ||
+      `${nextUrl.pathname}?${nextUrl.searchParams.toString()}` === routeKey
+    ) {
+      return;
+    }
+
+    setIsNavigating(true);
+  }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)] print:bg-white">
+    <main
+      className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.16),transparent_28rem),radial-gradient(circle_at_top_right,rgba(244,114,182,0.13),transparent_24rem),linear-gradient(135deg,#f8fafc_0%,#eef4f8_46%,#f8fafc_100%)] print:bg-white"
+      onClickCapture={showInternalLinkLoader}
+      onSubmitCapture={showSubmitLoader}
+    >
+      {isNavigating ? (
+        <div
+          aria-live="polite"
+          className="no-print fixed inset-x-0 top-0 z-50 pointer-events-none"
+          role="status"
+        >
+          <div className="h-1 w-full overflow-hidden bg-slate-200/70">
+            <div className="h-full w-1/3 animate-[route-progress_1.1s_ease-in-out_infinite] rounded-full bg-slate-950 shadow-lg shadow-slate-950/20" />
+          </div>
+          <div className="absolute right-4 top-4 flex items-center gap-2 rounded-2xl border border-white/80 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-xl shadow-slate-950/10 backdrop-blur lg:right-6">
+            <Loader2 aria-hidden="true" className="size-4 animate-spin text-teal-700" />
+            Loading
+          </div>
+        </div>
+      ) : null}
       <aside className="no-print fixed inset-y-0 left-0 hidden w-72 overflow-hidden border-r border-white/80 bg-slate-50/90 text-slate-800 shadow-[18px_0_70px_rgba(15,23,42,0.09)] backdrop-blur-2xl lg:block">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(14,165,233,0.18),transparent_15rem),radial-gradient(circle_at_92%_24%,rgba(20,184,166,0.16),transparent_14rem),radial-gradient(circle_at_35%_78%,rgba(139,92,246,0.12),transparent_16rem),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.76)_48%,rgba(240,249,255,0.68))]" />
         <div className="relative flex h-full flex-col">
           <div className="border-b border-white/80 p-5">
-            <Link className="flex items-center gap-3" href="/dashboard">
+            <Link
+              className="flex items-center gap-3"
+              href="/dashboard"
+              onClick={(event) => showRouteLoader("/dashboard", event)}
+            >
               <span className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-teal-500 to-violet-600 text-white shadow-xl shadow-sky-900/20">
                 <Shirt aria-hidden="true" className="size-5" />
               </span>
@@ -153,6 +253,7 @@ export function AppShellClient({
                   }`}
                   href={item.href}
                   key={item.href}
+                  onClick={(event) => showRouteLoader(item.href, event)}
                 >
                   <span
                     className={`flex size-8 items-center justify-center rounded-xl transition ${
@@ -176,7 +277,11 @@ export function AppShellClient({
       <section className="lg:pl-72 print:pl-0">
         <header className="no-print sticky top-0 z-20 border-b border-white/70 bg-white/80 px-4 py-3 shadow-sm shadow-slate-950/5 backdrop-blur-2xl sm:px-5 lg:hidden">
           <div className="flex items-center justify-between gap-3">
-            <Link className="flex min-w-0 items-center gap-3" href="/dashboard">
+            <Link
+              className="flex min-w-0 items-center gap-3"
+              href="/dashboard"
+              onClick={(event) => showRouteLoader("/dashboard", event)}
+            >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/20">
                 <Shirt aria-hidden="true" className="size-4" />
               </span>
@@ -214,6 +319,7 @@ export function AppShellClient({
                   }`}
                   href={item.href}
                   key={item.href}
+                  onClick={(event) => showRouteLoader(item.href, event)}
                 >
                   <Icon aria-hidden="true" className="size-4" />
                   {item.label}

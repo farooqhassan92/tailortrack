@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -66,7 +66,12 @@ export function GlobalSearch() {
 
       {isSearchActive ? (
         <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/12">
-          {isLoading ? <p className="px-4 py-3 text-sm text-slate-500">Searching...</p> : null}
+          {isLoading ? (
+            <p className="flex items-center gap-2 px-4 py-3 text-sm text-slate-500">
+              <Loader2 aria-hidden="true" className="size-4 animate-spin text-teal-700" />
+              Searching...
+            </p>
+          ) : null}
           {!isLoading && results.length ? (
             <div className="max-h-80 overflow-y-auto py-2">
               {results.map((result, index) => (

@@ -1,6 +1,7 @@
 import { Building2, CheckCircle2, CircleAlert, FileText, MapPin, Phone, Save } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganization } from "@/lib/organization";
 
@@ -155,13 +156,13 @@ export default async function SettingsPage({
               </label>
             </div>
 
-            <button
+            <PendingSubmitButton
               className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/15 transition hover:bg-slate-800"
-              type="submit"
+              pendingText="Saving..."
             >
               <Save aria-hidden="true" className="size-4" />
               Save business profile
-            </button>
+            </PendingSubmitButton>
           </form>
 
           <aside className="space-y-5">

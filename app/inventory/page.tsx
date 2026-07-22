@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -450,9 +451,12 @@ export default async function Page({
                       placeholder="Search name, code, color, fabric"
                     />
                   </label>
-                  <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+                  <PendingSubmitButton
+                    className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    pendingText="Searching..."
+                  >
                     Search
-                  </button>
+                  </PendingSubmitButton>
                 </form>
 
                 <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 text-sm font-semibold">
@@ -560,14 +564,15 @@ export default async function Page({
                                 <div className="flex items-start lg:justify-end">
                                   <form action={deleteInventoryItem}>
                                     <input name="productId" type="hidden" value={product.id} />
-                                    <button
-                                      className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                                    <PendingSubmitButton
+                                      className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                      pendingText={`Deleting ${product.name}`}
+                                      spinnerOnly
                                       title="Archive or delete wrong entry"
-                                      type="submit"
                                     >
                                       <Trash2 aria-hidden="true" className="size-4" />
                                       <span className="sr-only">Archive or delete {product.name}</span>
-                                    </button>
+                                    </PendingSubmitButton>
                                   </form>
                                 </div>
                               </div>
@@ -655,9 +660,12 @@ export default async function Page({
                                     Quantity is changed from Update stock so the movement history
                                     stays accurate.
                                   </p>
-                                  <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">
+                                  <PendingSubmitButton
+                                    className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                    pendingText="Saving..."
+                                  >
                                     Save changes
-                                  </button>
+                                  </PendingSubmitButton>
                                 </form>
                               </details>
                             </div>
@@ -810,9 +818,12 @@ export default async function Page({
                   For boxes, enter the cost and sale price for one complete box. For rolls, enter
                   the price per meter.
                 </p>
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Adding..."
+                >
                   Add item
-                </button>
+                </PendingSubmitButton>
               </form>
             </details>
 
@@ -876,9 +887,12 @@ export default async function Page({
                   name="note"
                   placeholder="Note"
                 />
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Saving..."
+                >
                   Save movement
-                </button>
+                </PendingSubmitButton>
               </form>
             </details>
 

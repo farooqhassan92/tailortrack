@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -408,9 +409,12 @@ export default async function SalariesPage({
                           step="0.01"
                           type="number"
                         />
-                        <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">
+                        <PendingSubmitButton
+                          className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          pendingText="Saving..."
+                        >
                           Save rate
-                        </button>
+                        </PendingSubmitButton>
                       </form>
                     </details>
                   </div>
@@ -457,9 +461,12 @@ export default async function SalariesPage({
                 step="0.01"
                 type="number"
               />
-              <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+              <PendingSubmitButton
+                className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                pendingText="Saving..."
+              >
                 Save rate
-              </button>
+              </PendingSubmitButton>
             </form>
           </aside>
         </section>
@@ -620,12 +627,13 @@ export default async function SalariesPage({
                                 placeholder={`Weekly salary for ${group.tailor.name}`}
                               />
                             </label>
-                            <button
+                            <PendingSubmitButton
                               className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2 disabled:cursor-not-allowed disabled:bg-slate-300"
                               disabled={group.hasMissingRate}
+                              pendingText="Marking paid..."
                             >
                               Mark selected as paid
-                            </button>
+                            </PendingSubmitButton>
                           </div>
                         </form>
                       ) : null}
@@ -803,9 +811,12 @@ export default async function SalariesPage({
                                       placeholder="Payment notes"
                                     />
                                   </label>
-                                  <button className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-2">
+                                  <PendingSubmitButton
+                                    className="h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+                                    pendingText="Saving..."
+                                  >
                                     Save changes
-                                  </button>
+                                  </PendingSubmitButton>
                                 </form>
                               </details>
 
@@ -832,10 +843,13 @@ export default async function SalariesPage({
                                     placeholder="Reason for cancellation"
                                     required
                                   />
-                                  <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-semibold text-white">
+                                  <PendingSubmitButton
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                    pendingText="Canceling..."
+                                  >
                                     <Ban aria-hidden="true" className="size-4" />
                                     Confirm cancel batch
-                                  </button>
+                                  </PendingSubmitButton>
                                 </form>
                               </details>
                             </div>

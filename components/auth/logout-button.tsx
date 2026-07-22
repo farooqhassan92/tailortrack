@@ -1,7 +1,7 @@
 "use client";
 
 import { useClerk } from "@clerk/nextjs";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { useTransition } from "react";
 
 export function LogoutButton({ compact = false }: { compact?: boolean }) {
@@ -24,7 +24,11 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
         title="Sign out"
         type="button"
       >
-        <LogOut aria-hidden="true" className="size-4" />
+        {isPending ? (
+          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+        ) : (
+          <LogOut aria-hidden="true" className="size-4" />
+        )}
       </button>
     );
   }
@@ -36,7 +40,11 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
       onClick={handleLogout}
       type="button"
     >
-      <LogOut aria-hidden="true" className="size-4" />
+      {isPending ? (
+        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+      ) : (
+        <LogOut aria-hidden="true" className="size-4" />
+      )}
       {isPending ? "Signing out..." : "Sign out"}
     </button>
   );

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -212,9 +213,12 @@ export default async function MeasurementsPage({
                 placeholder="Search customer name or phone"
               />
             </label>
-            <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+            <PendingSubmitButton
+              className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              pendingText="Searching..."
+            >
               Search
-            </button>
+            </PendingSubmitButton>
           </form>
         </section>
 
@@ -295,9 +299,12 @@ export default async function MeasurementsPage({
                             placeholder="Fit preference, collar, cuff, trouser style"
                           />
                         </label>
-                        <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-3">
+                        <PendingSubmitButton
+                          className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:col-span-3"
+                          pendingText="Saving..."
+                        >
                           Save profile
-                        </button>
+                        </PendingSubmitButton>
                       </form>
                     </details>
                   </div>
@@ -361,9 +368,12 @@ export default async function MeasurementsPage({
                                     name="styleNotes"
                                   />
                                 </label>
-                                <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white md:col-span-3">
+                                <PendingSubmitButton
+                                  className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 md:col-span-3"
+                                  pendingText="Saving..."
+                                >
                                   Save changes
-                                </button>
+                                </PendingSubmitButton>
                               </form>
                             </details>
                           </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -257,9 +258,12 @@ export default async function TailorsPage({
                       placeholder="Search tailor"
                     />
                   </label>
-                  <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+                  <PendingSubmitButton
+                    className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    pendingText="Searching..."
+                  >
                     Search
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               </div>
             </div>
@@ -364,21 +368,25 @@ export default async function TailorsPage({
                               name="phone"
                               placeholder="Phone"
                             />
-                            <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">
+                            <PendingSubmitButton
+                              className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              pendingText="Saving..."
+                            >
                               Save tailor
-                            </button>
+                            </PendingSubmitButton>
                           </form>
                         </details>
 
                         <form action={toggleTailorActive}>
                           <input name="tailorId" type="hidden" value={tailor.id} />
                           <input name="active" type="hidden" value={String(!tailor.active)} />
-                          <button
+                          <PendingSubmitButton
                             className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${
                               tailor.active
                                 ? "bg-slate-100 text-slate-700"
                                 : "bg-emerald-50 text-emerald-700"
-                            }`}
+                            } disabled:cursor-not-allowed disabled:opacity-60`}
+                            pendingText={tailor.active ? "Deactivating..." : "Activating..."}
                           >
                             {tailor.active ? (
                               <ToggleLeft aria-hidden="true" className="size-3.5" />
@@ -386,7 +394,7 @@ export default async function TailorsPage({
                               <ToggleRight aria-hidden="true" className="size-3.5" />
                             )}
                             {tailor.active ? "Deactivate" : "Activate"}
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </div>
                     </article>
@@ -438,9 +446,12 @@ export default async function TailorsPage({
                   name="phone"
                   placeholder="Phone"
                 />
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Adding..."
+                >
                   Add tailor
-                </button>
+                </PendingSubmitButton>
               </form>
             </details>
 

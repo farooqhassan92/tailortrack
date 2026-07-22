@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -569,9 +570,12 @@ export default async function ProductionPage({
                               </option>
                             ))}
                           </select>
-                          <button className="h-10 rounded-xl bg-slate-950 px-3 text-xs font-semibold text-white">
+                          <PendingSubmitButton
+                            className="h-10 rounded-xl bg-slate-950 px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            pendingText="Updating..."
+                          >
                             Update
-                          </button>
+                          </PendingSubmitButton>
                         </form>
 
                         <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs font-semibold">

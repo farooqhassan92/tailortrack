@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import {
   asNumber,
@@ -286,9 +287,12 @@ export default async function ExpensesPage({
                   placeholder="Search description or note"
                 />
               </label>
-              <button className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm">
+              <PendingSubmitButton
+                className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                pendingText="Searching..."
+              >
                 Search
-              </button>
+              </PendingSubmitButton>
             </form>
 
             <div className="flex gap-2 overflow-x-auto">
@@ -384,21 +388,25 @@ export default async function ExpensesPage({
                           >
                             <input name="expenseId" type="hidden" value={expense.id} />
                             <ExpenseFields expense={expense} />
-                            <button className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white">
+                            <PendingSubmitButton
+                              className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              pendingText="Saving..."
+                            >
                               Save expense
-                            </button>
+                            </PendingSubmitButton>
                           </form>
                         </details>
                         <form action={deleteExpense}>
                           <input name="expenseId" type="hidden" value={expense.id} />
-                          <button
-                            className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                          <PendingSubmitButton
+                            className="flex size-9 items-center justify-center rounded-xl bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            pendingText={`Deleting ${expense.description}`}
+                            spinnerOnly
                             title="Delete expense"
-                            type="submit"
                           >
                             <Trash2 aria-hidden="true" className="size-4" />
                             <span className="sr-only">Delete {expense.description}</span>
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </div>
                     </div>
@@ -472,9 +480,12 @@ export default async function ExpensesPage({
 
               <form action={createExpense} className="mt-5 grid gap-3">
                 <ExpenseFields />
-                <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                <PendingSubmitButton
+                  className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  pendingText="Recording..."
+                >
                   Record expense
-                </button>
+                </PendingSubmitButton>
               </form>
             </details>
 
