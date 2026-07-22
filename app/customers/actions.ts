@@ -32,7 +32,7 @@ function isDuplicatePhoneError(error: unknown) {
 }
 
 function readInitialMeasurement(formData: FormData) {
-  return {
+  const measurement = {
     chest: readDecimal(formData, "chest"),
     collar: readDecimal(formData, "collar"),
     inseam: readDecimal(formData, "inseam"),
@@ -45,6 +45,24 @@ function readInitialMeasurement(formData: FormData) {
     trouserWaist: readDecimal(formData, "trouserWaist"),
     waist: readDecimal(formData, "waist")
   };
+
+  const values = [
+    measurement.chest,
+    measurement.collar,
+    measurement.inseam,
+    measurement.shirtLength,
+    measurement.shoulder,
+    measurement.sleeve,
+    measurement.trouserLength,
+    measurement.trouserWaist,
+    measurement.waist
+  ];
+
+  if (values.some((value) => value?.lt(0))) {
+    throw new Error("Measurement values cannot be negative.");
+  }
+
+  return measurement;
 }
 
 function hasMeasurementData(measurement: ReturnType<typeof readInitialMeasurement>) {

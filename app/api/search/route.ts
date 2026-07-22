@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
+import { noStoreJson } from "@/lib/security";
 
 type DecimalLike = {
   toNumber: () => number;
@@ -26,7 +25,7 @@ export async function GET(request: Request) {
   const query = searchParams.get("q")?.trim() ?? "";
 
   if (query.length < 2) {
-    return NextResponse.json({ results: [] });
+    return noStoreJson({ results: [] });
   }
 
   const organizationId = await getCurrentOrganizationId();
@@ -89,7 +88,7 @@ export async function GET(request: Request) {
     })
   ]);
 
-  return NextResponse.json({
+  return noStoreJson({
     results: [
       ...customers.map((customer) => ({
         href: `/customers/${customer.id}`,

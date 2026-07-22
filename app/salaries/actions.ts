@@ -40,7 +40,8 @@ function readDecimal(formData: FormData, key: string) {
 }
 
 function parseDate(value: string, fallback: Date) {
-  return value ? new Date(value) : fallback;
+  const date = value ? new Date(value) : fallback;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function normalizeRateKey(value: string) {
@@ -61,7 +62,7 @@ export async function saveStitchingRate(formData: FormData) {
     redirect(salariesPath("invalid-number"));
   }
 
-  if (!garmentType || tailorRate.lte(0)) {
+  if (!garmentType || tailorRate.lte(0) || customerCharge.lt(0)) {
     redirect(salariesPath("rate-missing"));
   }
 
@@ -137,6 +138,10 @@ export async function createSalaryBatch(formData: FormData) {
   const now = new Date();
   const periodStart = parseDate(periodStartValue, now);
   const periodEnd = parseDate(periodEndValue, now);
+
+  if (!periodStart || !periodEnd) {
+    redirect(salariesPath("missing"));
+  }
 
   const selectedOrders = await prisma.stitchingOrder.findMany({
       include: {
@@ -253,12 +258,18 @@ export async function updateSalaryBatch(formData: FormData) {
   }
 
   const now = new Date();
+  const periodStart = parseDate(periodStartValue, now);
+  const periodEnd = parseDate(periodEndValue, now);
+
+  if (!periodStart || !periodEnd) {
+    redirect(paidSalariesPath("batch-missing", batchId, tailorId));
+  }
 
   await prisma.tailorSalaryBatch.updateMany({
     data: {
       notes,
-      periodEnd: parseDate(periodEndValue, now),
-      periodStart: parseDate(periodStartValue, now)
+      periodEnd,
+      periodStart
     },
     where: {
       id: batchId,

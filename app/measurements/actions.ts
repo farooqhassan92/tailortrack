@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
+import { safeInternalPath } from "@/lib/security";
 
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -19,11 +20,11 @@ function readDecimal(formData: FormData, key: string) {
 }
 
 function safeReturnTo(value: string) {
-  return value.startsWith("/measurements") ? (value as Route) : ("/measurements" as Route);
+  return safeInternalPath(value, ["/measurements"], "/measurements") as Route;
 }
 
 function measurementData(formData: FormData) {
-  return {
+  const data = {
     chest: readDecimal(formData, "chest"),
     collar: readDecimal(formData, "collar"),
     inseam: readDecimal(formData, "inseam"),
@@ -36,6 +37,24 @@ function measurementData(formData: FormData) {
     trouserWaist: readDecimal(formData, "trouserWaist"),
     waist: readDecimal(formData, "waist")
   };
+
+  const values = [
+    data.chest,
+    data.collar,
+    data.inseam,
+    data.shirtLength,
+    data.shoulder,
+    data.sleeve,
+    data.trouserLength,
+    data.trouserWaist,
+    data.waist
+  ];
+
+  if (values.some((value) => value?.lt(0))) {
+    throw new Error("Measurement values cannot be negative.");
+  }
+
+  return data;
 }
 
 export async function createMeasurement(formData: FormData) {

@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { PaymentMethod, Prisma } from "@prisma/client";
 import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -16,6 +16,13 @@ function readString(formData: FormData, key: string) {
 function readDecimal(formData: FormData, key: string) {
   const value = readString(formData, key);
   return value ? new Prisma.Decimal(value.replace(/,/g, "")) : new Prisma.Decimal(0);
+}
+
+function readPaymentMethod(formData: FormData) {
+  const method = readString(formData, "paymentMethod");
+  return Object.values(PaymentMethod).includes(method as PaymentMethod)
+    ? (method as PaymentMethod)
+    : PaymentMethod.CASH;
 }
 
 function salesPath(status: string): Route {
@@ -56,7 +63,7 @@ export async function createInventorySale(formData: FormData) {
   const garmentType = readString(formData, "garmentType");
   const dueDateValue = readString(formData, "dueDate");
   const styleNotes = readString(formData, "styleNotes") || null;
-  const paymentMethod = readString(formData, "paymentMethod") || "CASH";
+  const paymentMethod = readPaymentMethod(formData);
   const note = readString(formData, "note");
 
   let quantity: Prisma.Decimal;
@@ -78,6 +85,10 @@ export async function createInventorySale(formData: FormData) {
 
   if (!hasInventoryLine && !hasStitchingLine) {
     redirect(salesPath("missing"));
+  }
+
+  if (quantity.lt(0) || stitchingCharge.lt(0) || discount.lt(0) || paidAmount.lt(0)) {
+    redirect(salesPath("invalid-number"));
   }
 
   if (customerId) {
@@ -219,7 +230,7 @@ export async function createInventorySale(formData: FormData) {
       await tx.payment.create({
         data: {
           amount: safePaidAmount,
-          method: paymentMethod as "CASH" | "CARD" | "BANK_TRANSFER" | "OTHER",
+          method: paymentMethod,
           note: note || `Payment for ${invoiceNumber}`,
           saleId: sale.id
         }
@@ -240,7 +251,7 @@ export async function createInventorySale(formData: FormData) {
 export async function addInvoicePayment(formData: FormData) {
   const organizationId = await getCurrentOrganizationId();
   const saleId = readString(formData, "saleId");
-  const paymentMethod = readString(formData, "paymentMethod") || "CASH";
+  const paymentMethod = readPaymentMethod(formData);
   const note = readString(formData, "note");
 
   let amount: Prisma.Decimal;
@@ -284,7 +295,7 @@ export async function addInvoicePayment(formData: FormData) {
     await tx.payment.create({
       data: {
         amount: safeAmount,
-        method: paymentMethod as "CASH" | "CARD" | "BANK_TRANSFER" | "OTHER",
+        method: paymentMethod,
         note: note || `Payment for ${sale.invoiceNumber}`,
         saleId
       }

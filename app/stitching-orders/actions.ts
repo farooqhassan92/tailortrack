@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentOrganizationId } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
+import { safeInternalPath } from "@/lib/security";
 
 const statuses: StitchingStatus[] = [
   "PENDING",
@@ -29,9 +30,7 @@ function readStatus(value: string): StitchingStatus {
 }
 
 function safeReturnTo(value: string) {
-  return value.startsWith("/stitching-orders") || value.startsWith("/production")
-    ? (value as Route)
-    : ("/stitching-orders" as Route);
+  return safeInternalPath(value, ["/stitching-orders", "/production"], "/stitching-orders") as Route;
 }
 
 export async function updateStitchingOrder(formData: FormData) {
@@ -66,12 +65,17 @@ export async function updateStitchingOrder(formData: FormData) {
   }
 
   const now = new Date();
+  const dueDate = dueDateValue ? new Date(dueDateValue) : null;
+
+  if (dueDate && Number.isNaN(dueDate.getTime())) {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}statusMessage=missing` as Route);
+  }
 
   await prisma.stitchingOrder.updateMany({
     data: {
       completedAt: status === "READY" || status === "DELIVERED" ? now : undefined,
       deliveredAt: status === "DELIVERED" ? now : undefined,
-      dueDate: dueDateValue ? new Date(dueDateValue) : null,
+      dueDate,
       status,
       styleNotes,
       tailorId

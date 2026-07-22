@@ -123,6 +123,10 @@ export async function createInventoryItem(formData: FormData) {
     redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
   }
 
+  if (quantity.lt(0) || costPrice.lt(0) || sellingPrice.lt(0)) {
+    redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
+  }
+
   if (providedSku) {
     const existingProduct = await prisma.product.findFirst({
       where: {
@@ -235,7 +239,8 @@ export async function recordInventoryMovement(formData: FormData) {
 
   const product = await prisma.product.findFirst({
     select: {
-      id: true
+      id: true,
+      quantityOnHand: true
     },
     where: {
       id: productId,
@@ -249,6 +254,10 @@ export async function recordInventoryMovement(formData: FormData) {
 
   const quantityDelta =
     type === "SALE" ? quantity.mul(-1) : type === "ADJUSTMENT" ? quantity : quantity;
+
+  if (type === "SALE" && product.quantityOnHand.lt(quantity)) {
+    redirect(inventoryStatusPath("movement-missing"));
+  }
 
   await prisma.$transaction([
     prisma.product.update({
@@ -301,6 +310,10 @@ export async function updateInventoryItem(formData: FormData) {
     costPrice = readDecimal(formData, "costPrice");
     sellingPrice = readDecimal(formData, "sellingPrice");
   } catch {
+    redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
+  }
+
+  if (costPrice.lt(0) || sellingPrice.lt(0)) {
     redirect(inventoryCategoryPath(selectedCategory, "invalid-number"));
   }
 
