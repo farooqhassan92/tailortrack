@@ -18,7 +18,7 @@ import {
 import { AppShell } from "@/components/layout/app-shell";
 import {
   formatCurrency,
-  getDashboardReport,
+  getDashboardSummary,
   getSelectedPeriod,
   periodOptions
 } from "@/lib/dashboard-report";
@@ -32,7 +32,7 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const selectedPeriod = getSelectedPeriod(params?.period);
-  const report = await getDashboardReport(selectedPeriod);
+  const report = await getDashboardSummary(selectedPeriod);
   const reportHref = `/dashboard/report?period=${selectedPeriod}` as Route;
   const pdfHref = `/dashboard/report?period=${selectedPeriod}&print=1` as Route;
 

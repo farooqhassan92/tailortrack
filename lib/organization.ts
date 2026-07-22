@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
 
@@ -26,7 +27,7 @@ function displayName(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>)
   );
 }
 
-export async function getSignedInUserProfile() {
+export const getSignedInUserProfile = cache(async function getSignedInUserProfile() {
   const { userId } = await auth.protect();
   const clerkUser = await currentUser();
 
@@ -38,9 +39,9 @@ export async function getSignedInUserProfile() {
     email: primaryEmail(clerkUser, userId),
     name: displayName(clerkUser)
   };
-}
+});
 
-export async function getCurrentOrganization() {
+export const getCurrentOrganization = cache(async function getCurrentOrganization() {
   const profile = await getSignedInUserProfile();
 
   const user = await prisma.user.findUnique({
@@ -85,9 +86,9 @@ export async function getCurrentOrganization() {
   }
 
   return membership.organization;
-}
+});
 
-export async function getCurrentOrganizationId() {
+export const getCurrentOrganizationId = cache(async function getCurrentOrganizationId() {
   const organization = await getCurrentOrganization();
   return organization.id;
-}
+});

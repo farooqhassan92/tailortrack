@@ -96,6 +96,163 @@ export function getSelectedPeriod(value: string | string[] | undefined): PeriodV
     : "daily";
 }
 
+export async function getDashboardSummary(period: PeriodValue) {
+  const organizationId = await getCurrentOrganizationId();
+  const now = new Date();
+  const startDate = getPeriodStart(period, now);
+  const todayStart = startOfDay(now);
+  const selectedPeriodLabel =
+    periodOptions.find((periodOption) => periodOption.value === period)?.label ?? "Daily";
+  const periodWhere = {
+    createdAt: {
+      gte: startDate,
+      lte: now
+    },
+    organizationId
+  };
+
+  const [
+    saleTotals,
+    pendingStitching,
+    lowStockProducts,
+    activeProductCount,
+    activeCustomerCount,
+    allSaleCount,
+    setupRateCount,
+    todayPayments,
+    todayExpenseTotals,
+    todaySalaryPaidTotals
+  ] = await Promise.all([
+    prisma.sale.aggregate({
+      _sum: {
+        paidAmount: true,
+        total: true
+      },
+      where: periodWhere
+    }),
+    prisma.stitchingOrder.count({
+      where: {
+        ...periodWhere,
+        status: {
+          in: ["PENDING", "CUTTING", "STITCHING"]
+        }
+      }
+    }),
+    prisma.product.findMany({
+      orderBy: {
+        quantityOnHand: "asc"
+      },
+      select: {
+        id: true
+      },
+      take: 8,
+      where: {
+        organizationId,
+        archivedAt: null,
+        quantityOnHand: {
+          lte: 5
+        },
+        type: {
+          not: "STITCHING_SERVICE"
+        }
+      }
+    }),
+    prisma.product.count({
+      where: {
+        organizationId,
+        archivedAt: null,
+        type: {
+          not: "STITCHING_SERVICE"
+        }
+      }
+    }),
+    prisma.customer.count({
+      where: {
+        archivedAt: null,
+        organizationId
+      }
+    }),
+    prisma.sale.count({
+      where: {
+        organizationId
+      }
+    }),
+    prisma.product.count({
+      where: {
+        archivedAt: null,
+        organizationId,
+        type: "STITCHING_SERVICE"
+      }
+    }),
+    prisma.payment.findMany({
+      where: {
+        createdAt: {
+          gte: todayStart,
+          lte: now
+        },
+        sale: {
+          organizationId
+        }
+      }
+    }),
+    prisma.expense.aggregate({
+      _sum: {
+        amount: true
+      },
+      where: {
+        organizationId,
+        spentAt: {
+          gte: todayStart,
+          lte: now
+        }
+      }
+    }),
+    prisma.tailorSalaryBatch.aggregate({
+      _sum: {
+        totalAmount: true
+      },
+      where: {
+        createdAt: {
+          gte: todayStart,
+          lte: now
+        },
+        organizationId,
+        voidedAt: null
+      }
+    })
+  ]);
+
+  const totalSales = asNumber(saleTotals._sum.total);
+  const paidSales = asNumber(saleTotals._sum.paidAmount);
+  const todayCashIn = todayPayments.reduce((sum, payment) => sum + asNumber(payment.amount), 0);
+  const todayExpenses = asNumber(todayExpenseTotals._sum.amount);
+  const todaySalaryPaid = asNumber(todaySalaryPaidTotals._sum.totalAmount);
+  const todayPaymentByMethod = todayPayments.reduce<Record<string, number>>((totals, payment) => {
+    totals[payment.method] = (totals[payment.method] ?? 0) + asNumber(payment.amount);
+    return totals;
+  }, {});
+
+  return {
+    dailyCash: {
+      expenses: todayExpenses,
+      netCash: todayCashIn - todayExpenses - todaySalaryPaid,
+      paymentsByMethod: todayPaymentByMethod,
+      salaryPaid: todaySalaryPaid,
+      totalReceived: todayCashIn
+    },
+    lowStockProducts,
+    pendingStitching,
+    selectedPeriodLabel,
+    setup: {
+      hasCustomers: activeCustomerCount > 0,
+      hasInventory: activeProductCount > 0,
+      hasRates: setupRateCount > 0,
+      hasSales: allSaleCount > 0
+    },
+    unpaidBalance: totalSales - paidSales
+  };
+}
+
 export async function getDashboardReport(period: PeriodValue) {
   const organizationId = await getCurrentOrganizationId();
   const now = new Date();

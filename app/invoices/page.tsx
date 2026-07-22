@@ -29,6 +29,7 @@ const statusOptions = [
 ] as const;
 
 type StatusFilter = "all" | PaymentStatus;
+const pageSize = 25;
 
 function asNumber(value: DecimalLike | number | null | undefined) {
   if (!value) {
@@ -61,6 +62,29 @@ function getStatus(value: string | string[] | undefined): StatusFilter {
   return "all";
 }
 
+function getPage(value: string | string[] | undefined) {
+  const selectedValue = Array.isArray(value) ? value[0] : value;
+  const page = Number.parseInt(selectedValue ?? "1", 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function invoicesHref({
+  page,
+  q,
+  status
+}: {
+  page?: number;
+  q?: string;
+  status: StatusFilter;
+}) {
+  return `/invoices?${new URLSearchParams({
+    ...(q ? { q } : {}),
+    status,
+    ...(page && page > 1 ? { page: String(page) } : {})
+  }).toString()}` as Route;
+}
+
 function statusTone(status: string) {
   if (status === "PAID") {
     return "border-emerald-100 bg-emerald-50 text-emerald-700";
@@ -76,11 +100,12 @@ function statusTone(status: string) {
 export default async function InvoicesPage({
   searchParams
 }: {
-  searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
+  searchParams?: Promise<{ page?: string | string[]; q?: string | string[]; status?: string | string[] }>;
 }) {
   const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedStatus = getStatus(params?.status);
+  const currentPage = getPage(params?.page);
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const query = queryValue?.trim() ?? "";
   const statusWhere: Prisma.SaleWhereInput =
@@ -109,7 +134,8 @@ export default async function InvoicesPage({
       orderBy: {
         createdAt: "desc"
       },
-      take: 50,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
       where
     }),
     prisma.sale.aggregate({
@@ -136,6 +162,13 @@ export default async function InvoicesPage({
   const totalAmount = asNumber(totals._sum.total);
   const paidAmount = asNumber(totals._sum.paidAmount);
   const balanceAmount = totalAmount - paidAmount;
+  const totalPages = Math.max(1, Math.ceil(invoiceCount / pageSize));
+  const previousPageHref = currentPage > 1
+    ? invoicesHref({ page: currentPage - 1, q: query, status: selectedStatus })
+    : null;
+  const nextPageHref = currentPage < totalPages
+    ? invoicesHref({ page: currentPage + 1, q: query, status: selectedStatus })
+    : null;
 
   return (
     <AppShell>
@@ -215,10 +248,7 @@ export default async function InvoicesPage({
 
             <div className="flex gap-2 overflow-x-auto">
               {statusOptions.map((option) => {
-                const href = `/invoices?${new URLSearchParams({
-                  ...(query ? { q: query } : {}),
-                  status: option.value
-                }).toString()}` as Route;
+                const href = invoicesHref({ q: query, status: option.value });
 
                 return (
                   <Link
@@ -410,6 +440,40 @@ export default async function InvoicesPage({
               </tbody>
             </table>
           </div>
+
+          {invoiceCount > pageSize ? (
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex gap-2">
+                {previousPageHref ? (
+                  <Link
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                    href={previousPageHref}
+                  >
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                    Previous
+                  </span>
+                )}
+                {nextPageHref ? (
+                  <Link
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                    href={nextPageHref}
+                  >
+                    Next
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                    Next
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </AppShell>

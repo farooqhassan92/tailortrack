@@ -81,19 +81,42 @@ const measurementFields = [
   { label: "Inseam", name: "inseam" }
 ] as const;
 
+const pageSize = 25;
+
+function getPage(value: string | string[] | undefined) {
+  const selectedValue = Array.isArray(value) ? value[0] : value;
+  const page = Number(selectedValue);
+
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
 export default async function CustomersPage({
   searchParams
 }: {
-  searchParams?: Promise<{ q?: string | string[]; status?: string | string[] }>;
+  searchParams?: Promise<{ page?: string | string[]; q?: string | string[]; status?: string | string[] }>;
 }) {
   const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
+  const currentPage = getPage(params?.page);
   const query = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params?.status[0] : params?.status;
   const normalizedQuery = query?.trim() ?? "";
   const statusMessage = getStatusMessage(statusMessages, status);
+  const customerWhere = {
+    archivedAt: null,
+    organizationId,
+    ...(normalizedQuery
+      ? {
+          OR: [
+            { name: { contains: normalizedQuery, mode: "insensitive" as const } },
+            { phone: { contains: normalizedQuery, mode: "insensitive" as const } },
+            { address: { contains: normalizedQuery, mode: "insensitive" as const } }
+          ]
+        }
+      : {})
+  };
 
-  const [customers, customerCount, totals] = await Promise.all([
+  const [customers, customerCount, matchingCustomerCount, totals] = await Promise.all([
     prisma.customer.findMany({
       include: {
         _count: {
@@ -119,25 +142,18 @@ export default async function CustomersPage({
       orderBy: {
         updatedAt: "desc"
       },
-      where: {
-        archivedAt: null,
-        organizationId,
-        ...(normalizedQuery
-          ? {
-              OR: [
-                { name: { contains: normalizedQuery, mode: "insensitive" as const } },
-                { phone: { contains: normalizedQuery, mode: "insensitive" as const } },
-                { address: { contains: normalizedQuery, mode: "insensitive" as const } }
-              ]
-            }
-          : {})
-      }
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+      where: customerWhere
     }),
     prisma.customer.count({
       where: {
         archivedAt: null,
         organizationId
       }
+    }),
+    prisma.customer.count({
+      where: customerWhere
     }),
     prisma.sale.aggregate({
       _sum: {
@@ -156,6 +172,15 @@ export default async function CustomersPage({
   const customerSalesTotal = asNumber(totals._sum.total);
   const customerPaidTotal = asNumber(totals._sum.paidAmount);
   const customerBalance = customerSalesTotal - customerPaidTotal;
+  const totalPages = Math.max(Math.ceil(matchingCustomerCount / pageSize), 1);
+  const previousPageHref = `/customers?${new URLSearchParams({
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    page: String(Math.max(currentPage - 1, 1))
+  }).toString()}` as Route;
+  const nextPageHref = `/customers?${new URLSearchParams({
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    page: String(Math.min(currentPage + 1, totalPages))
+  }).toString()}` as Route;
 
   return (
     <AppShell>
@@ -221,7 +246,9 @@ export default async function CustomersPage({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">Customer list</h2>
-                  <p className="text-sm text-slate-500">{customers.length} active profiles shown</p>
+                  <p className="text-sm text-slate-500">
+                    Showing {customers.length} of {matchingCustomerCount} matching profiles
+                  </p>
                 </div>
                 <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
                   Active customers
@@ -389,6 +416,38 @@ export default async function CustomersPage({
                 </div>
               )}
             </div>
+
+            {matchingCustomerCount > pageSize ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-3 text-sm">
+                <p className="font-medium text-slate-500">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <Link
+                    aria-disabled={currentPage <= 1}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                      currentPage <= 1
+                        ? "pointer-events-none bg-slate-100 text-slate-400"
+                        : "border border-slate-200 bg-white text-slate-700"
+                    }`}
+                    href={previousPageHref}
+                  >
+                    Previous
+                  </Link>
+                  <Link
+                    aria-disabled={currentPage >= totalPages}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                      currentPage >= totalPages
+                        ? "pointer-events-none bg-slate-100 text-slate-400"
+                        : "bg-slate-950 text-white"
+                    }`}
+                    href={nextPageHref}
+                  >
+                    Next
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <aside className="space-y-5">

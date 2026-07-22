@@ -43,6 +43,7 @@ const categoryOptions = [
 ] as const;
 
 type CategoryFilter = "all" | ExpenseCategory;
+const pageSize = 25;
 
 const statusMessages = {
   created: {
@@ -77,6 +78,13 @@ function getCategory(value: string | string[] | undefined): CategoryFilter {
   return "all";
 }
 
+function getPage(value: string | string[] | undefined) {
+  const selectedValue = Array.isArray(value) ? value[0] : value;
+  const page = Number.parseInt(selectedValue ?? "1", 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
 function categoryLabel(value: ExpenseCategory | CategoryFilter) {
   return categoryOptions.find((option) => option.value === value)?.label ?? "Expense";
 }
@@ -87,17 +95,20 @@ function dateInputValue(value: Date) {
 
 function expensesHref({
   category,
+  page,
   period,
   q
 }: {
   category: CategoryFilter;
+  page?: number;
   period: PeriodValue;
   q?: string;
 }) {
   return `/expenses?${new URLSearchParams({
     ...(category !== "all" ? { category } : {}),
     period,
-    ...(q ? { q } : {})
+    ...(q ? { q } : {}),
+    ...(page && page > 1 ? { page: String(page) } : {})
   }).toString()}` as Route;
 }
 
@@ -106,6 +117,7 @@ export default async function ExpensesPage({
 }: {
   searchParams?: Promise<{
     category?: string | string[];
+    page?: string | string[];
     period?: string | string[];
     q?: string | string[];
     status?: string | string[];
@@ -114,6 +126,7 @@ export default async function ExpensesPage({
   const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedCategory = getCategory(params?.category);
+  const currentPage = getPage(params?.page);
   const selectedPeriod = getSelectedPeriod(params?.period);
   const queryValue = Array.isArray(params?.q) ? params.q[0] : params?.q;
   const status = Array.isArray(params?.status) ? params.status[0] : params?.status;
@@ -149,7 +162,8 @@ export default async function ExpensesPage({
       orderBy: {
         spentAt: "desc"
       },
-      take: 80,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
       where
     }),
     prisma.expense.groupBy({
@@ -162,6 +176,9 @@ export default async function ExpensesPage({
     prisma.expense.aggregate({
       _sum: {
         amount: true
+      },
+      where: {
+        organizationId
       }
     }),
     prisma.expense.count({
@@ -173,6 +190,23 @@ export default async function ExpensesPage({
   const highestCategory = [...periodTotals].sort(
     (a, b) => asNumber(b._sum.amount) - asNumber(a._sum.amount)
   )[0];
+  const totalPages = Math.max(1, Math.ceil(expenseCount / pageSize));
+  const previousPageHref = currentPage > 1
+    ? expensesHref({
+        category: selectedCategory,
+        page: currentPage - 1,
+        period: selectedPeriod,
+        q: query
+      })
+    : null;
+  const nextPageHref = currentPage < totalPages
+    ? expensesHref({
+        category: selectedCategory,
+        page: currentPage + 1,
+        period: selectedPeriod,
+        q: query
+      })
+    : null;
 
   return (
     <AppShell>
@@ -380,6 +414,40 @@ export default async function ExpensesPage({
                 </div>
               )}
             </div>
+
+            {expenseCount > pageSize ? (
+              <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  {previousPageHref ? (
+                    <Link
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                      href={previousPageHref}
+                    >
+                      Previous
+                    </Link>
+                  ) : (
+                    <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                      Previous
+                    </span>
+                  )}
+                  {nextPageHref ? (
+                    <Link
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                      href={nextPageHref}
+                    >
+                      Next
+                    </Link>
+                  ) : (
+                    <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                      Next
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <aside className="space-y-5">

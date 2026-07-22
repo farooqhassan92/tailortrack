@@ -112,6 +112,8 @@ const movementOptions = [
   { label: "Adjust", value: "ADJUSTMENT" }
 ] as const;
 
+const pageSize = 30;
+
 const statusMessages = {
   "archived-code": {
     text: "That internal code belongs to an archived item. Restore it before adding stock.",
@@ -191,17 +193,26 @@ function formatCurrency(value: DecimalLike | number | null | undefined) {
   }).format(asNumber(value))}`;
 }
 
+function getPage(value: string | string[] | undefined) {
+  const selectedValue = Array.isArray(value) ? value[0] : value;
+  const page = Number(selectedValue);
+
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
 export default async function Page({
   searchParams
 }: {
   searchParams?: Promise<{
     category?: string | string[];
+    page?: string | string[];
     q?: string | string[];
     status?: string | string[];
   }>;
 }) {
   const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
+  const currentPage = getPage(params?.page);
   const selectedCategory = Array.isArray(params?.category)
     ? params?.category[0]
     : params?.category;
@@ -210,7 +221,7 @@ export default async function Page({
   const statusMessage = getStatusMessage(statusMessages, status);
   const normalizedQuery = query?.trim() ?? "";
   const categoryFilter = inventoryCategories.some((category) => category.value === selectedCategory)
-    ? selectedCategory
+    ? (selectedCategory as (typeof inventoryCategories)[number]["value"])
     : "UNSTITCHED_ROLLS";
 
   const where = {
@@ -229,14 +240,41 @@ export default async function Page({
       : {})
   };
 
-  const [products, allInventoryProducts, recentMovements] = await Promise.all([
+  const [products, productCount, allInventoryProducts, movementProducts, recentMovements] =
+    await Promise.all([
     prisma.product.findMany({
       orderBy: {
-        category: "asc"
+        updatedAt: "desc"
       },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+      where
+    }),
+    prisma.product.count({
       where
     }),
     prisma.product.findMany({
+      select: {
+        costPrice: true,
+        quantityOnHand: true
+      },
+      where: {
+        archivedAt: null,
+        organizationId,
+        type: {
+          not: "STITCHING_SERVICE"
+        }
+      }
+    }),
+    prisma.product.findMany({
+      orderBy: {
+        name: "asc"
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true
+      },
       where: {
         archivedAt: null,
         organizationId,
@@ -247,7 +285,13 @@ export default async function Page({
     }),
     prisma.inventoryMovement.findMany({
       include: {
-        product: true
+        product: {
+          select: {
+            name: true,
+            sku: true,
+            unit: true
+          }
+        }
       },
       orderBy: {
         createdAt: "desc"
@@ -279,6 +323,17 @@ export default async function Page({
   const categoryLowStockCount = products.filter(
     (product) => product.type !== "STITCHING_SERVICE" && asNumber(product.quantityOnHand) <= 3
   ).length;
+  const totalPages = Math.max(Math.ceil(productCount / pageSize), 1);
+  const previousPageHref = `/inventory?${new URLSearchParams({
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    category: categoryFilter,
+    page: String(Math.max(currentPage - 1, 1))
+  }).toString()}`;
+  const nextPageHref = `/inventory?${new URLSearchParams({
+    ...(normalizedQuery ? { q: normalizedQuery } : {}),
+    category: categoryFilter,
+    page: String(Math.min(currentPage + 1, totalPages))
+  }).toString()}`;
 
   return (
     <AppShell>
@@ -373,7 +428,9 @@ export default async function Page({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-950">Inventory listings</h2>
-                    <p className="text-sm text-slate-500">{products.length} items shown</p>
+                    <p className="text-sm text-slate-500">
+                      Showing {products.length} of {productCount} matching items
+                    </p>
                   </div>
                   <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
                     Internal codes
@@ -404,7 +461,8 @@ export default async function Page({
                     const CategoryIcon = category.icon;
                     const href = `/inventory?${new URLSearchParams({
                       ...(normalizedQuery ? { q: normalizedQuery } : {}),
-                      category: category.value
+                      category: category.value,
+                      page: "1"
                     }).toString()}`;
 
                     return (
@@ -617,6 +675,38 @@ export default async function Page({
                   </div>
                 )}
               </div>
+
+              {productCount > pageSize ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-3 text-sm">
+                  <p className="font-medium text-slate-500">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <a
+                      aria-disabled={currentPage <= 1}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                        currentPage <= 1
+                          ? "pointer-events-none bg-slate-100 text-slate-400"
+                          : "border border-slate-200 bg-white text-slate-700"
+                      }`}
+                      href={previousPageHref}
+                    >
+                      Previous
+                    </a>
+                    <a
+                      aria-disabled={currentPage >= totalPages}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold ${
+                        currentPage >= totalPages
+                          ? "pointer-events-none bg-slate-100 text-slate-400"
+                          : "bg-slate-950 text-white"
+                      }`}
+                      href={nextPageHref}
+                    >
+                      Next
+                    </a>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -754,7 +844,7 @@ export default async function Page({
                   required
                 >
                   <option value="">Select item</option>
-                  {products.map((product) => (
+                  {movementProducts.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} ({product.sku || "no code"})
                     </option>

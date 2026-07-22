@@ -52,6 +52,7 @@ const statusMessages = {
 } as const;
 
 type StatusFilter = "all" | StitchingStatus;
+const pageSize = 25;
 
 function asNumber(value: DecimalLike | number | null | undefined) {
   if (!value) {
@@ -94,6 +95,29 @@ function getStatus(value: string | string[] | undefined): StatusFilter {
   return "all";
 }
 
+function getPage(value: string | string[] | undefined) {
+  const selectedValue = Array.isArray(value) ? value[0] : value;
+  const page = Number.parseInt(selectedValue ?? "1", 10);
+
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function stitchingOrdersHref({
+  page,
+  q,
+  status
+}: {
+  page?: number;
+  q?: string;
+  status: StatusFilter;
+}) {
+  return `/stitching-orders?${new URLSearchParams({
+    ...(q ? { q } : {}),
+    status,
+    ...(page && page > 1 ? { page: String(page) } : {})
+  }).toString()}` as Route;
+}
+
 function statusTone(status: string) {
   if (status === "DELIVERED") {
     return "border-emerald-100 bg-emerald-50 text-emerald-700";
@@ -126,6 +150,7 @@ export default async function StitchingOrdersPage({
   searchParams
 }: {
   searchParams?: Promise<{
+    page?: string | string[];
     q?: string | string[];
     status?: string | string[];
     statusMessage?: string | string[];
@@ -135,6 +160,7 @@ export default async function StitchingOrdersPage({
   const organizationId = await getCurrentOrganizationId();
   const params = await searchParams;
   const selectedStatus = getStatus(params?.status);
+  const currentPage = getPage(params?.page);
   const queryValue = Array.isArray(params?.q) ? params?.q[0] : params?.q;
   const updatedValue = Array.isArray(params?.updated) ? params?.updated[0] : params?.updated;
   const statusValue = Array.isArray(params?.statusMessage) ? params?.statusMessage[0] : params?.statusMessage;
@@ -143,10 +169,7 @@ export default async function StitchingOrdersPage({
     statusMessages,
     statusValue ?? (updatedValue === "1" ? "updated" : undefined)
   );
-  const returnTo = `/stitching-orders?${new URLSearchParams({
-    ...(query ? { q: query } : {}),
-    status: selectedStatus
-  }).toString()}`;
+  const returnTo = stitchingOrdersHref({ page: currentPage, q: query, status: selectedStatus });
   const statusWhere: Prisma.StitchingOrderWhereInput =
     selectedStatus === "all" ? {} : { status: selectedStatus };
   const queryWhere: Prisma.StitchingOrderWhereInput = query
@@ -194,7 +217,8 @@ export default async function StitchingOrdersPage({
           createdAt: "desc"
         }
       ],
-      take: 60,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
       where
     }),
     prisma.tailor.findMany({
@@ -233,6 +257,13 @@ export default async function StitchingOrdersPage({
       }
     })
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const previousPageHref = currentPage > 1
+    ? stitchingOrdersHref({ page: currentPage - 1, q: query, status: selectedStatus })
+    : null;
+  const nextPageHref = currentPage < totalPages
+    ? stitchingOrdersHref({ page: currentPage + 1, q: query, status: selectedStatus })
+    : null;
 
   return (
     <AppShell>
@@ -314,10 +345,7 @@ export default async function StitchingOrdersPage({
 
             <div className="flex gap-2 overflow-x-auto">
               {statusOptions.map((option) => {
-                const href = `/stitching-orders?${new URLSearchParams({
-                  ...(query ? { q: query } : {}),
-                  status: option.value
-                }).toString()}` as Route;
+                const href = stitchingOrdersHref({ q: query, status: option.value });
 
                 return (
                   <Link
@@ -508,6 +536,40 @@ export default async function StitchingOrdersPage({
               </div>
             )}
           </div>
+
+          {totalCount > pageSize ? (
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex gap-2">
+                {previousPageHref ? (
+                  <Link
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                    href={previousPageHref}
+                  >
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                    Previous
+                  </span>
+                )}
+                {nextPageHref ? (
+                  <Link
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:text-slate-950"
+                    href={nextPageHref}
+                  >
+                    Next
+                  </Link>
+                ) : (
+                  <span className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 font-semibold text-slate-400">
+                    Next
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </AppShell>
