@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { getStatusMessage, StatusAlert } from "@/components/ui/status-alert";
 import { getCurrentOrganization } from "@/lib/organization";
 import { prisma } from "@/lib/prisma";
@@ -397,7 +398,59 @@ export default async function SaleDetailPage({
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="grid gap-3 p-4 md:hidden">
+                {sale.items.map((item) => {
+                  const unit = item.product?.unit ?? "service";
+
+                  return (
+                    <article
+                      className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+                      key={item.id}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-slate-950">
+                            {item.description}
+                          </p>
+                          {item.product?.sku ? (
+                            <p className="mt-1 text-xs text-slate-500">SKU {item.product.sku}</p>
+                          ) : null}
+                          {item.stitchingOrder ? (
+                            <p className="mt-1 text-xs text-violet-600">
+                              Order {item.stitchingOrder.orderNumber}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                          {item.stitchingOrderId ? "Stitching" : "Inventory"}
+                        </span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <p className="text-xs text-slate-500">Qty</p>
+                          <p className="font-semibold text-slate-950">
+                            {formatQuantity(item.quantity, item.productId ? unit : null)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500">Rate</p>
+                          <p className="font-semibold text-slate-950">
+                            {formatCurrency(item.unitPrice)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-slate-500">Total</p>
+                          <p className="font-semibold text-slate-950">
+                            {formatCurrency(item.total)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
                   <thead className="bg-slate-50/70 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
                     <tr>
@@ -621,9 +674,12 @@ export default async function SaleDetailPage({
                       placeholder="Optional payment note"
                     />
                   </label>
-                  <button className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm">
+                  <PendingSubmitButton
+                    className="h-11 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    pendingText="Saving..."
+                  >
                     Save payment
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               </section>
             ) : null}

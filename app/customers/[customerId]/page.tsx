@@ -495,7 +495,63 @@ function InvoiceTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <>
+    <div className="grid gap-3 p-4 md:hidden">
+      {sales.length ? (
+        sales.map((sale) => {
+          const balance = asNumber(sale.total) - asNumber(sale.paidAmount);
+
+          return (
+            <article
+              className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+              key={sale.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">
+                    {sale.invoiceNumber}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">{formatDate(sale.createdAt)}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${paymentTone(sale.paymentStatus)}`}
+                >
+                  {sale.paymentStatus}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500">Total</p>
+                  <p className="font-semibold text-slate-950">{formatCurrency(sale.total)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Balance</p>
+                  <p className="font-semibold text-slate-950">{formatCurrency(balance)}</p>
+                </div>
+              </div>
+              <Link
+                className="mt-4 inline-flex w-full justify-center rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-semibold text-white"
+                href={`/sales/${sale.id}` as Route}
+              >
+                {balance > 0 ? "Settle balance" : "Open invoice"}
+              </Link>
+            </article>
+          );
+        })
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+          <p className="font-semibold text-slate-950">No invoices for this customer yet.</p>
+          <Link
+            className="mt-4 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+            href={"/sales" as Route}
+          >
+            Create sale
+          </Link>
+        </div>
+      )}
+    </div>
+
+    <div className="hidden overflow-x-auto md:block">
       <table className="min-w-full divide-y divide-slate-100 text-sm">
         <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
           <tr>
@@ -557,6 +613,7 @@ function InvoiceTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -575,7 +632,73 @@ function OrderTable({
   }>;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <>
+    <div className="grid gap-3 p-4 md:hidden">
+      {orders.length ? (
+        orders.map((order) => {
+          const invoice = order.saleItems[0]?.sale;
+
+          return (
+            <article
+              className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+              key={order.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">
+                    {order.orderNumber}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">{order.garmentType}</p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${orderTone(order.status)}`}
+                >
+                  {order.status}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-xs text-slate-500">Due</p>
+                  <p className="font-semibold text-slate-950">{formatDate(order.dueDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Charge</p>
+                  <p className="font-semibold text-slate-950">
+                    {formatCurrency(order.stitchingCharge)}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500">Tailor</p>
+                  <p className="font-semibold text-slate-950">
+                    {order.tailor?.name ?? "Not assigned"}
+                  </p>
+                </div>
+              </div>
+              {invoice ? (
+                <Link
+                  className="mt-4 inline-flex w-full justify-center rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-semibold text-white"
+                  href={`/sales/${invoice.id}` as Route}
+                >
+                  {invoice.invoiceNumber}
+                </Link>
+              ) : null}
+            </article>
+          );
+        })
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+          <p className="font-semibold text-slate-950">No stitching orders for this customer yet.</p>
+          <Link
+            className="mt-4 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+            href={"/sales" as Route}
+          >
+            Create stitching sale
+          </Link>
+        </div>
+      )}
+    </div>
+
+    <div className="hidden overflow-x-auto md:block">
       <table className="min-w-full divide-y divide-slate-100 text-sm">
         <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
           <tr>
@@ -637,6 +760,7 @@ function OrderTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

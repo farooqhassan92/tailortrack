@@ -254,7 +254,77 @@ export default async function InvoicesPage({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 p-4 md:hidden">
+            {invoices.length ? (
+              invoices.map((invoice) => {
+                const balance = asNumber(invoice.total) - asNumber(invoice.paidAmount);
+                const detailHref = `/sales/${invoice.id}` as Route;
+
+                return (
+                  <article
+                    className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+                    key={invoice.id}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          className="block truncate text-sm font-semibold text-slate-950"
+                          href={detailHref}
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {formatDateTime(invoice.createdAt)}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusTone(invoice.paymentStatus)}`}
+                      >
+                        {invoice.paymentStatus}
+                      </span>
+                    </div>
+                    <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                      <p className="text-sm font-semibold text-slate-950">
+                        {invoice.customer?.name ?? "Walk-in"}
+                      </p>
+                      {invoice.customer?.phone ? (
+                        <p className="mt-1 text-xs text-slate-500">{invoice.customer.phone}</p>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500">Total</p>
+                        <p className="font-semibold text-slate-950">
+                          {formatCurrency(invoice.total)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Balance</p>
+                        <p className="font-semibold text-slate-950">{formatCurrency(balance)}</p>
+                      </div>
+                    </div>
+                    <Link
+                      className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
+                        balance > 0
+                          ? "bg-slate-950 text-white shadow-sm"
+                          : "border border-slate-200 bg-white text-slate-700"
+                      }`}
+                      href={detailHref}
+                    >
+                      <CreditCard aria-hidden="true" className="size-3.5" />
+                      {balance > 0 ? "Settle balance" : "Open invoice"}
+                    </Link>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                No invoices found for this search.
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>

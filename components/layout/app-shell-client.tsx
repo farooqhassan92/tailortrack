@@ -189,7 +189,7 @@ export function AppShellClient({
                 </span>
               </span>
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <UserButton />
               <LogoutButton compact />
               <span className="flex size-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700">
